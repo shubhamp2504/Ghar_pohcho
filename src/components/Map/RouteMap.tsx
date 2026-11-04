@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { RouteOption, LocationPoint, Language } from '../../types/routing';
+import type { CommunityReport } from '../../types/community';
 import { getCongestionColor } from '../../utils/geo';
 
 interface RouteMapProps {
@@ -9,6 +10,7 @@ interface RouteMapProps {
   origin: LocationPoint;
   destination: LocationPoint;
   language: Language;
+  communityReports?: CommunityReport[];
   onSelectRoute?: (index: number) => void;
 }
 
@@ -18,6 +20,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   origin,
   destination,
   language,
+  communityReports,
   onSelectRoute,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -162,6 +165,41 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     destMarker.bindPopup(`<b>Destination (Home)</b><br/>${destination.name}`);
     allBounds.extend([destination.lat, destination.lng]);
 
+    // 6. Draw Community Incidents along the corridor
+    if (communityReports && communityReports.length > 0) {
+      communityReports.forEach((rep) => {
+        let badgeEmoji = '⚠️';
+        let bg = '#EF4444';
+        if (rep.category === 'WATERLOGGING') { badgeEmoji = '🌊'; bg = '#2563EB'; }
+        else if (rep.category === 'TOLL_QUEUE') { badgeEmoji = '💳'; bg = '#9333EA'; }
+        else if (rep.category === 'CONSTRUCTION') { badgeEmoji = '🚧'; bg = '#EA580C'; }
+        else if (rep.category === 'ACCIDENT') { badgeEmoji = '🚨'; bg = '#DC2626'; }
+        else if (rep.category === 'HEAVY_TRAFFIC') { badgeEmoji = '🔥'; bg = '#DC2626'; }
+
+        const incidentIcon = L.divIcon({
+          className: 'custom-incident-marker',
+          html: `
+            <div style="background: ${bg}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 2px solid white; font-size: 13px;">
+              ${badgeEmoji}
+            </div>
+          `,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        });
+
+        const incidentMarker = L.marker([rep.lat, rep.lng], { icon: incidentIcon }).addTo(layerGroup);
+        incidentMarker.bindPopup(`
+          <div style="font-family: system-ui; min-width: 180px; padding: 4px;">
+            <div style="font-size: 10px; font-weight: 800; color: ${bg}; text-transform: uppercase;">
+              COMMUNITY REPORT • CONFIDENCE ${rep.confidenceScore}
+            </div>
+            <div style="font-weight: 700; font-size: 13px; margin: 2px 0;">${rep.roadName}</div>
+            ${rep.description ? `<div style="font-size: 11px; color: #475569;">${rep.description}</div>` : ''}
+          </div>
+        `);
+      });
+    }
+
     // Fit map bounds
     if (allBounds.isValid()) {
       map.fitBounds(allBounds, {
@@ -169,7 +207,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         maxZoom: 14,
       });
     }
-  }, [routes, selectedRouteIndex, origin, destination, language, onSelectRoute]);
+  }, [routes, selectedRouteIndex, origin, destination, language, communityReports, onSelectRoute]);
 
   // Clean up on unmount
   useEffect(() => {

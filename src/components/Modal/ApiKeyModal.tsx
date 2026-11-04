@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Key, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
+import { X, Key, ShieldAlert, CheckCircle2, RefreshCw, Database } from 'lucide-react';
 import type { Language } from '../../types/routing';
 import { translations } from '../../i18n/translations';
+import { getSupabaseCredentials, setSupabaseCredentials } from '../../services/supabase/supabaseClient';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -19,6 +20,9 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   language,
 }) => {
   const [keyValue, setKeyValue] = useState(currentApiKey || '');
+  const initialSb = getSupabaseCredentials();
+  const [sbUrl, setSbUrl] = useState(initialSb.url || '');
+  const [sbKey, setSbKey] = useState(initialSb.anonKey || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -27,6 +31,11 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
 
   const handleSave = () => {
     onSaveKey(keyValue.trim() || null);
+    if (sbUrl.trim() && sbKey.trim()) {
+      setSupabaseCredentials(sbUrl.trim(), sbKey.trim());
+    } else {
+      setSupabaseCredentials(null, null);
+    }
     setSaveStatus(t.keySaved);
     setTimeout(() => {
       setSaveStatus(null);
@@ -36,7 +45,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
 
   const handleClear = () => {
     setKeyValue('');
+    setSbUrl('');
+    setSbKey('');
     onSaveKey(null);
+    setSupabaseCredentials(null, null);
     setSaveStatus('Cleared! Using Offline Corridor Model');
     setTimeout(() => {
       setSaveStatus(null);
@@ -76,16 +88,46 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         </div>
 
         <div className="space-y-3 mb-5">
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Google Cloud API Key (Routes API v2 enabled)
-          </label>
-          <input
-            type="password"
-            value={keyValue}
-            onChange={(e) => setKeyValue(e.target.value)}
-            placeholder="AIzaSy..."
-            className="w-full px-3.5 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          />
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Google Cloud API Key (Routes API v2 enabled)
+            </label>
+            <input
+              type="password"
+              value={keyValue}
+              onChange={(e) => setKeyValue(e.target.value)}
+              placeholder="AIzaSy..."
+              className="w-full px-3.5 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Database className="w-4 h-4 text-emerald-600" />
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Supabase PostGIS Backend (Optional)
+              </label>
+            </div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={sbUrl}
+                onChange={(e) => setSbUrl(e.target.value)}
+                placeholder="https://xyz.supabase.co"
+                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+              <input
+                type="password"
+                value={sbKey}
+                onChange={(e) => setSbKey(e.target.value)}
+                placeholder="Anon / Public Key"
+                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              If left empty, GharPahucho uses built-in local PostGIS storage with simulated corridor feeds.
+            </p>
+          </div>
         </div>
 
         {saveStatus && (

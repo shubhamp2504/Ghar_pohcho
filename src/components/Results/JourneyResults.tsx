@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   Share2,
@@ -12,8 +12,11 @@ import {
   CheckCircle2,
   ChevronRight,
   TrendingUp,
+  Radio,
+  PlusCircle,
 } from 'lucide-react';
 import type { RouteCalculationResult, Language } from '../../types/routing';
+import type { CommunityReport } from '../../types/community';
 import { translations } from '../../i18n/translations';
 import {
   formatDuration,
@@ -22,6 +25,9 @@ import {
   formatETA,
 } from '../../utils/geo';
 import { RouteMap } from '../Map/RouteMap';
+import { CommunityReportCard } from '../Community/CommunityReportCard';
+import { ReportIncidentModal } from '../Community/ReportIncidentModal';
+import { communityService } from '../../services/community/communityService';
 
 interface JourneyResultsProps {
   result: RouteCalculationResult;
@@ -38,9 +44,37 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
   const t = translations[language];
   const [selectedRouteIdx, setSelectedRouteIdx] = useState(result.selectedRouteIndex || 0);
   const [copied, setCopied] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [corridorReports, setCorridorReports] = useState<CommunityReport[]>([]);
 
   const selectedRoute = result.routes[selectedRouteIdx] || result.routes[0];
   const delayInfo = formatDelay(selectedRoute.additionalDelaySeconds, language);
+
+  const loadReports = useCallback(async () => {
+    const all = await communityService.getActiveReports();
+    const alongRoute = communityService.filterReportsAlongRoute(
+      all,
+      selectedRoute.polyline,
+      6000 // 6km buffer
+    );
+    setCorridorReports(alongRoute);
+  }, [selectedRoute.polyline]);
+
+  useEffect(() => {
+    let isMounted = true;
+    communityService.getActiveReports().then((all) => {
+      if (!isMounted) return;
+      const along = communityService.filterReportsAlongRoute(
+        all,
+        selectedRoute.polyline,
+        6000
+      );
+      setCorridorReports(along);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRoute.polyline]);
 
   // Generate readable WhatsApp message
   const generateShareText = () => {
@@ -256,6 +290,7 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           origin={result.origin}
           destination={result.destination}
           language={language}
+          communityReports={corridorReports}
           onSelectRoute={(idx) => setSelectedRouteIdx(idx)}
         />
       </div>
@@ -427,6 +462,67 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
         )}
       </div>
 
+      {/* Community Ground Reports Section (Phase 2 - Section 7) */}
+      <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-lg border border-slate-200/80 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-orange-100 text-orange-700 rounded-xl">
+              <Radio className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-slate-900 text-base">
+                  {t.communityReportsTitle}
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  {corridorReports.length} {t.verifiedByTravellers}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Live ground intelligence reported by travellers along this corridor
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>{t.reportRoadCondition}</span>
+          </button>
+        </div>
+
+        {corridorReports.length === 0 ? (
+          <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+            <p className="text-sm font-bold text-slate-700">
+              {t.noCommunityReports}
+            </p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Spotting unexpected waterlogging, toll queues, or lane work? Report it to help others.
+            </p>
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="mt-2 text-xs font-bold text-orange-600 hover:underline inline-block"
+            >
+              + {t.reportRoadCondition}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+            {corridorReports.map((report) => (
+              <CommunityReportCard
+                key={report.id}
+                report={report}
+                language={language}
+                onVoted={loadReports}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Best Time to Leave Planner Preview (Section 6) */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-5 sm:p-7 text-white shadow-xl">
         <div className="flex items-center justify-between mb-4">
@@ -476,6 +572,15 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           *Planning estimate based on typical historical corridor patterns. Departure forecasts are updated in real-time.
         </p>
       </div>
+
+      {/* Community Report Incident Modal */}
+      <ReportIncidentModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        language={language}
+        defaultLocation={result.origin}
+        onReportSubmitted={loadReports}
+      />
     </div>
   );
 };

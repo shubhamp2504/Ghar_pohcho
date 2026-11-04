@@ -87,3 +87,4 @@ export interface PopularRoutePreset {
   typicalDuration: string;
   highwayTag: string;
 }
+
