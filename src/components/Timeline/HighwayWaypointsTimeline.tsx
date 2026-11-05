@@ -40,6 +40,12 @@ const STATUS_CONFIG: Record<
     text: 'text-red-800',
     icon: <AlertTriangle className="w-3 h-3 text-red-600" />,
   },
+  BLOCKED_DIVERTED: {
+    label: { en: 'Road Block / Detour', hi: 'रास्ता बंद / डाइवर्जन', mr: 'रस्ता बंद / पर्यायी मार्ग' },
+    bg: 'bg-rose-600 text-white border border-rose-700 shadow-sm',
+    text: 'text-white',
+    icon: <AlertTriangle className="w-3 h-3 text-white" />,
+  },
 };
 
 export const HighwayWaypointsTimeline: React.FC<HighwayWaypointsTimelineProps> = ({
@@ -108,6 +114,8 @@ export const HighwayWaypointsTimeline: React.FC<HighwayWaypointsTimelineProps> =
                       ? 'bg-emerald-600 text-white border-emerald-300'
                       : isLast
                       ? 'bg-red-600 text-white border-red-300'
+                      : wp.status === 'BLOCKED_DIVERTED'
+                      ? 'bg-rose-700 text-white border-rose-300 animate-pulse'
                       : wp.status === 'CONGESTED'
                       ? 'bg-red-500 text-white border-red-200'
                       : wp.status === 'MODERATE'

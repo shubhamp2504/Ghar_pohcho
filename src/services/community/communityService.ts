@@ -147,18 +147,28 @@ export class CommunityService {
           let category: ReportCategory = 'HEAVY_TRAFFIC';
           const cat = props.iconCategory;
           if (cat === 1) category = 'ACCIDENT';
-          else if (cat === 7 || cat === 8) category = 'CONSTRUCTION';
-          else if (cat === 2) category = 'WATERLOGGING';
-          else if (cat === 6) category = 'HEAVY_TRAFFIC';
-          else if (cat === 9) category = 'ROAD_CLOSURE';
+          else if (cat === 8 || cat === 7) category = 'ROAD_CLOSURE'; // 8: Road Closed, 7: Lane Closed
+          else if (cat === 9) category = 'CONSTRUCTION'; // 9: Road Works
+          else if (cat === 11) category = 'WATERLOGGING'; // 11: Flooding
+          else if (cat === 6) category = 'HEAVY_TRAFFIC'; // 6: Jam
+          else if (cat === 2 || cat === 3 || cat === 4 || cat === 14) category = 'HAZARD';
 
           const road = props.from
             ? `${props.from}${props.to ? ' → ' + props.to : ''}`
             : 'Highway Corridor Stretch';
 
           const delayMins = props.delay ? Math.round(props.delay / 60) : 0;
-          const eventDesc = props.events?.[0]?.description || 'Live Traffic Incident';
-          const description = `${eventDesc}${delayMins > 0 ? ` (+${delayMins} min traffic delay)` : ''}`;
+          let eventDesc = props.events?.[0]?.description;
+          if (!eventDesc) {
+            if (category === 'ROAD_CLOSURE') eventDesc = 'Road Blocked / Traffic Diverted';
+            else if (category === 'ACCIDENT') eventDesc = 'Reported Vehicle Accident';
+            else if (category === 'CONSTRUCTION') eventDesc = 'Active Road Construction / Narrow Lanes';
+            else eventDesc = 'Live Traffic Slowdown';
+          }
+
+          const description = category === 'ROAD_CLOSURE'
+            ? `⛔ ${eventDesc}: Road is blocked or restricted. Traffic is being routed via active diversion.`
+            : `${eventDesc}${delayMins > 0 ? ` (+${delayMins} min traffic delay)` : ''}`;
 
           liveReports.push({
             id: `live_sensor_${Math.random().toString(36).substring(2, 9)}`,

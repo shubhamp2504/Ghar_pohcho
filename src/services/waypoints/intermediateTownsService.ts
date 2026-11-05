@@ -1202,13 +1202,26 @@ export class IntermediateTownsService {
       let delaySeconds = 0;
       let highlight = spec.defaultHighlight;
 
-      if (liveMatch && liveMatch.delaySeconds > 30) {
-        status =
-          liveMatch.congestionLevel === 'SEVERE' || liveMatch.congestionLevel === 'HEAVY'
-            ? 'CONGESTED'
-            : 'MODERATE';
-        delaySeconds = liveMatch.delaySeconds;
-        highlight = `${liveMatch.roadName} (+${Math.round(delaySeconds / 60)}m delay)`;
+      if (liveMatch) {
+        const roadLower = liveMatch.roadName.toLowerCase();
+        const isBlocked =
+          roadLower.includes('closure') ||
+          roadLower.includes('closed') ||
+          roadLower.includes('block') ||
+          roadLower.includes('divert');
+
+        if (isBlocked) {
+          status = 'BLOCKED_DIVERTED';
+          delaySeconds = Math.max(liveMatch.delaySeconds, 600);
+          highlight = `⛔ Road Block / Diversion in effect: ${liveMatch.roadName}`;
+        } else if (liveMatch.delaySeconds > 30) {
+          status =
+            liveMatch.congestionLevel === 'SEVERE' || liveMatch.congestionLevel === 'HEAVY'
+              ? 'CONGESTED'
+              : 'MODERATE';
+          delaySeconds = liveMatch.delaySeconds;
+          highlight = `${liveMatch.roadName} (+${Math.round(delaySeconds / 60)}m delay)`;
+        }
       }
 
       return {

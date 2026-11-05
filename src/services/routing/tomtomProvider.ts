@@ -119,12 +119,17 @@ export class TomTomRoutingProvider implements IRoutingProvider {
 
       // Extract authentic real-time traffic sections directly from live response
       const trafficSegments: TrafficSegment[] = [];
+      const warnings: string[] = [];
+
       if (tomRoute.sections && points.length > 0) {
         tomRoute.sections.forEach((sec, sIdx) => {
           const delay = sec.delayInSeconds || 0;
+          const isClosure = sec.simpleCategory === 'CLOSURE';
+          const isRoadWork = sec.simpleCategory === 'ROAD_WORK';
+          const isAccident = sec.simpleCategory === 'ACCIDENT';
           const isSignificant =
             sec.sectionType === 'TRAFFIC' &&
-            (delay >= 60 || sec.simpleCategory === 'JAM' || sec.simpleCategory === 'ROAD_WORK');
+            (delay >= 60 || sec.simpleCategory === 'JAM' || isRoadWork || isClosure || isAccident);
 
           if (isSignificant && sec.startPointIndex < points.length && sec.endPointIndex < points.length) {
             const slicePts = points.slice(sec.startPointIndex, sec.endPointIndex + 1);
@@ -133,7 +138,7 @@ export class TomTomRoutingProvider implements IRoutingProvider {
               const speed = sec.effectiveSpeedInKmh ?? 30;
 
               let level: CongestionLevel = 'MODERATE';
-              if (delay >= 600 || speed <= 15 || sec.magnitudeOfDelay === 3) {
+              if (isClosure || delay >= 600 || speed <= 15 || sec.magnitudeOfDelay === 3) {
                 level = 'SEVERE';
               } else if (delay >= 300 || speed <= 25 || sec.magnitudeOfDelay === 2) {
                 level = 'HEAVY';
@@ -141,16 +146,25 @@ export class TomTomRoutingProvider implements IRoutingProvider {
                 level = 'SLOW';
               }
 
-              const categoryTitle =
-                sec.simpleCategory === 'JAM'
-                  ? 'Live Traffic Jam'
-                  : sec.simpleCategory === 'ROAD_WORK'
-                  ? 'Active Road Work'
-                  : sec.simpleCategory === 'ACCIDENT'
-                  ? 'Reported Accident'
-                  : sec.simpleCategory === 'CLOSURE'
-                  ? 'Lane Closure'
-                  : 'Congested Stretch';
+              const categoryTitle = isClosure
+                ? 'Road Block / Diversion Active'
+                : sec.simpleCategory === 'JAM'
+                ? 'Live Traffic Jam'
+                : isRoadWork
+                ? 'Active Road Work / Narrow Lane'
+                : isAccident
+                ? 'Reported Accident'
+                : 'Congested Stretch';
+
+              if (isClosure && !warnings.some((w) => w.includes('Road Block'))) {
+                warnings.push('⛔ Road Block / Traffic Diversion: Section closed; route is guided via active detour.');
+              }
+              if (isAccident && !warnings.some((w) => w.includes('Accident'))) {
+                warnings.push('🚨 Accident Alert: Incident reported along this highway section.');
+              }
+              if (isRoadWork && !warnings.some((w) => w.includes('Road Work'))) {
+                warnings.push('🚧 Active Road Construction: Lane restriction in progress.');
+              }
 
               trafficSegments.push({
                 id: `live-sec-${idx}-${sIdx}`,
@@ -164,11 +178,17 @@ export class TomTomRoutingProvider implements IRoutingProvider {
                 delaySeconds: delay,
                 source: 'GOOGLE_ROUTES_API',
                 lastUpdated: computedAt,
-                description: `Live sensor data: ${speed} km/h crawl speed (+${Math.round(delay / 60)} min delay).`,
+                description: isClosure
+                  ? 'Live sensor alert: Active roadblock or road closure. Traffic routed via designated diversion.'
+                  : `Live sensor data: ${speed} km/h crawl speed (+${Math.round(delay / 60)} min delay).`,
               });
             }
           }
         });
+      }
+
+      if (additionalDelaySeconds > 600 && !warnings.some((w) => w.includes('slowdown'))) {
+        warnings.push(`Live traffic delay: +${Math.round(additionalDelaySeconds / 60)} min slowdown on route`);
       }
 
       const etaDate = new Date(now.getTime() + durationSeconds * 1000);
@@ -193,9 +213,7 @@ export class TomTomRoutingProvider implements IRoutingProvider {
         encodedPolyline: '',
         polyline,
         trafficSegments,
-        warnings: additionalDelaySeconds > 600
-          ? [`Live traffic delay: +${Math.round(additionalDelaySeconds / 60)} min slowdown on route`]
-          : [],
+        warnings,
         source: 'GOOGLE_ROUTES_API',
         dataConfidence: 'REALTIME',
         lastUpdated: computedAt,

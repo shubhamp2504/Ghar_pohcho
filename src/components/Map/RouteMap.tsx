@@ -236,7 +236,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       communityReports.forEach((rep) => {
         let badgeEmoji = '⚠️';
         let bg = '#EF4444';
-        if (rep.category === 'WATERLOGGING') { badgeEmoji = '🌊'; bg = '#2563EB'; }
+        if (rep.category === 'ROAD_CLOSURE') { badgeEmoji = '⛔'; bg = '#991B1B'; }
+        else if (rep.category === 'WATERLOGGING') { badgeEmoji = '🌊'; bg = '#2563EB'; }
         else if (rep.category === 'TOLL_QUEUE') { badgeEmoji = '💳'; bg = '#9333EA'; }
         else if (rep.category === 'CONSTRUCTION') { badgeEmoji = '🚧'; bg = '#EA580C'; }
         else if (rep.category === 'ACCIDENT') { badgeEmoji = '🚨'; bg = '#DC2626'; }

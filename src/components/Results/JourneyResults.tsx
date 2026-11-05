@@ -15,6 +15,7 @@ import {
   Radio,
   PlusCircle,
   Navigation,
+  AlertOctagon,
 } from 'lucide-react';
 import type { RouteCalculationResult, Language } from '../../types/routing';
 import type { CommunityReport } from '../../types/community';
@@ -173,6 +174,46 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           </button>
         </div>
       </div>
+
+      {/* High-Priority Road Alert / Diversion Banner */}
+      {(selectedRoute.warnings.length > 0 || corridorReports.some((r) => r.category === 'ROAD_CLOSURE')) && (
+        <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-4 sm:p-5 shadow-md flex items-start gap-3.5 animate-in fade-in-50">
+          <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+            <AlertOctagon className="w-5 h-5 animate-pulse" />
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-black text-rose-950 text-sm sm:text-base">
+                {language === 'hi'
+                  ? 'लाइव सड़क सूचना: रास्ता बंद या ट्रैफिक डायवर्जन'
+                  : language === 'mr'
+                  ? 'थेट रस्ता सूचना: रस्ता बंद किंवा पर्यायी मार्ग सुरू'
+                  : 'Live Road Alert: Active Road Block / Traffic Diversion'}
+              </h3>
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-200 text-rose-900 border border-rose-300">
+                Verified Today
+              </span>
+            </div>
+            <p className="text-xs text-rose-800 leading-relaxed font-medium">
+              {language === 'hi'
+                ? 'इस रूट पर कुछ हिस्सों में सड़क बंद या डायवर्जन है। हमारा लाइव नेविगेशन सिस्टम बंद हिस्से को छोड़कर खुले वैकल्पिक रास्ते से मार्गदर्शन कर रहा है। कुल समय में यह देरी शामिल है।'
+                : language === 'mr'
+                ? 'या मार्गावर काही ठिकाणी रस्ता बंद किंवा वाहतूक वळवण्यात आली आहे. आमची यंत्रणा बंद रस्ता टाळून सुरू असलेल्या पर्यायी मार्गाने मार्गदर्शन करत आहे. प्रवासाच्या अंदाजित वेळेत हा विलंब समाविष्ट आहे.'
+                : 'Active road blockage or diversion detected along this corridor. The routing engine has automatically diverted around the blocked section via the open detour. Extra travel time is factored into your ETA.'}
+            </p>
+            {selectedRoute.warnings.length > 0 && (
+              <ul className="space-y-1 pt-1 text-xs text-rose-900 font-semibold">
+                {selectedRoute.warnings.map((warn, wIdx) => (
+                  <li key={`warn-${wIdx}`} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+                    <span>{warn}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Primary Journey Summary Hero Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-200/80 relative overflow-hidden">

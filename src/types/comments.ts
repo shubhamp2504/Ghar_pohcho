@@ -1,5 +1,6 @@
 export type CommentTag =
   | 'CLEAR_ROAD'
+  | 'ROAD_BLOCKED_DIVERTED'
   | 'HEAVY_RAIN_FOG'
   | 'SUDDEN_SLOWDOWN'
   | 'FASTAG_DELAY'

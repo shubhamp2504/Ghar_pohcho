@@ -1,4 +1,4 @@
-export type WaypointStatus = 'CLEAR' | 'MODERATE' | 'CONGESTED';
+export type WaypointStatus = 'CLEAR' | 'MODERATE' | 'CONGESTED' | 'BLOCKED_DIVERTED';
 
 export interface HighwayWaypoint {
   id: string;

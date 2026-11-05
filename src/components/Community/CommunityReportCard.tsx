@@ -76,7 +76,7 @@ export const CommunityReportCard: React.FC<CommunityReportCardProps> = ({
       case 'CONSTRUCTION':
         return { label: t.cat_CONSTRUCTION, icon: <Cone className="w-4 h-4" />, color: 'bg-orange-100 text-orange-800 border-orange-200' };
       case 'ROAD_CLOSURE':
-        return { label: t.cat_ROAD_CLOSURE, icon: <Ban className="w-4 h-4" />, color: 'bg-stone-100 text-stone-800 border-stone-200' };
+        return { label: `⛔ ${t.cat_ROAD_CLOSURE}`, icon: <Ban className="w-4 h-4" />, color: 'bg-rose-600 text-white border-rose-700 shadow-sm' };
       default:
         return { label: t.cat_HAZARD, icon: <AlertTriangle className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
     }

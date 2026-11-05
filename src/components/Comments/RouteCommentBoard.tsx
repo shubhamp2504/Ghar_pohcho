@@ -12,6 +12,7 @@ import {
   Hammer,
   CheckCircle2,
   Lightbulb,
+  Ban,
 } from 'lucide-react';
 import type { RouteComment, CommentTag } from '../../types/comments';
 import type { Language, LocationPoint } from '../../types/routing';
@@ -32,6 +33,12 @@ const TAG_CONFIG: Record<
     bg: 'bg-emerald-100',
     text: 'text-emerald-800',
     icon: <CheckCircle2 className="w-3 h-3 text-emerald-600" />,
+  },
+  ROAD_BLOCKED_DIVERTED: {
+    label: { en: 'Road Block / Diversion', hi: 'रास्ता बंद / डायवर्जन', mr: 'रस्ता बंद / पर्यायी मार्ग' },
+    bg: 'bg-rose-600 text-white border border-rose-700 shadow-sm',
+    text: 'text-white',
+    icon: <Ban className="w-3 h-3 text-white" />,
   },
   HEAVY_RAIN_FOG: {
     label: { en: 'Fog / Rain', hi: 'कोहरा / बारिश', mr: 'धुके / पाऊस' },
