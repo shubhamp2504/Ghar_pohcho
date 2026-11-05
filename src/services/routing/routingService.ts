@@ -6,6 +6,7 @@ import type {
 import { GoogleRoutesProvider } from './googleRoutesProvider';
 import { FreeOsrmRoutingProvider } from './freeOsrmProvider';
 import { MockRoutingProvider } from './mockRoutingProvider';
+import { quotaGuard } from '../quota/quotaGuard';
 
 const API_KEY_STORAGE_KEY = 'gharpahucho_google_api_key';
 const RECENT_SEARCHES_STORAGE_KEY = 'gharpahucho_recent_searches';
@@ -47,27 +48,44 @@ export class RoutingService {
   }
 
   async calculateRoutes(request: RouteRequest): Promise<RouteCalculationResult> {
-    // 1. If user specifically configured a paid Google Cloud key, use it
+    // 1. Check Short-Lived Cache (Deduplication - prevents repeating identical API queries)
+    const cached = quotaGuard.getCachedRoute(request.origin, request.destination, request.departureTime);
+    if (cached) {
+      this.saveRecentSearch(request.origin, request.destination);
+      return cached;
+    }
+
+    // 2. If user provided a Google Key, check Safety Quota Guard before making call
     if (this.googleProvider.isConfigured()) {
-      try {
-        const result = await this.googleProvider.calculateRoutes(request);
-        this.saveRecentSearch(request.origin, request.destination);
-        return result;
-      } catch (err: unknown) {
-        console.warn('Google Routes API failed, falling back to 100% Free OSRM Engine:', err);
+      if (quotaGuard.canMakeGoogleCall()) {
+        try {
+          const result = await this.googleProvider.calculateRoutes(request);
+          quotaGuard.recordGoogleCall('ROUTES');
+          quotaGuard.setCachedRoute(request.origin, request.destination, result, request.departureTime);
+          this.saveRecentSearch(request.origin, request.destination);
+          return result;
+        } catch (err: unknown) {
+          console.warn('Google Routes API call failed, falling back to 100% Free OSRM:', err);
+        }
+      } else {
+        console.warn('Google API daily free quota cap reached! Automatic circuit breaker tripped to guarantee $0 spend.');
       }
     }
 
-    // 2. Default: 100% Free OpenStreetMap & Community Traffic Engine (Zero Cost, No Credit Card)
+    // 3. 100% Free OpenStreetMap & Community Traffic Engine (Zero Cost, No Billing)
     try {
       const result = await this.freeOsrmProvider.calculateRoutes(request);
+      if (this.googleProvider.isConfigured() && !quotaGuard.canMakeGoogleCall()) {
+        result.disclaimer = 'Free Google API safety quota reached for today. Switched automatically to Free Open Network to guarantee $0 spend.';
+      }
+      quotaGuard.setCachedRoute(request.origin, request.destination, result, request.departureTime);
       this.saveRecentSearch(request.origin, request.destination);
       return result;
     } catch (osrmErr) {
-      console.warn('OSRM network request failed, falling back to Offline Highway Corridor fixture:', osrmErr);
+      console.warn('Free OSRM network request failed, falling back to Offline Highway Corridor:', osrmErr);
     }
 
-    // 3. Resilient Offline Fallback
+    // 4. Offline Corridor Resilient Fallback
     const result = await this.mockProvider.calculateRoutes(request);
     this.saveRecentSearch(request.origin, request.destination);
     return result;

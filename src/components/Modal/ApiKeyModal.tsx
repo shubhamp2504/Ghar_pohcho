@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { X, Key, ShieldAlert, CheckCircle2, RefreshCw, Database } from 'lucide-react';
+import {
+  X,
+  Key,
+  ShieldAlert,
+  CheckCircle2,
+  RefreshCw,
+  Database,
+  ShieldCheck,
+} from 'lucide-react';
 import type { Language } from '../../types/routing';
 import { translations } from '../../i18n/translations';
 import { getSupabaseCredentials, setSupabaseCredentials } from '../../services/supabase/supabaseClient';
+import { quotaGuard } from '../../services/quota/quotaGuard';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -25,6 +34,9 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   const [sbKey, setSbKey] = useState(initialSb.anonKey || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
+  const [usageStats, setUsageStats] = useState(() => quotaGuard.getStats());
+  const [dailyLimitInput, setDailyLimitInput] = useState(usageStats.dailyLimit.toString());
+
   if (!isOpen) return null;
 
   const t = translations[language];
@@ -36,7 +48,14 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
     } else {
       setSupabaseCredentials(null, null);
     }
+
+    const parsedLimit = parseInt(dailyLimitInput, 10);
+    if (!isNaN(parsedLimit) && parsedLimit > 0) {
+      quotaGuard.setDailyLimit(parsedLimit);
+    }
+
     setSaveStatus(t.keySaved);
+    setUsageStats(quotaGuard.getStats());
     setTimeout(() => {
       setSaveStatus(null);
       onClose();
@@ -49,58 +68,127 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
     setSbKey('');
     onSaveKey(null);
     setSupabaseCredentials(null, null);
-    setSaveStatus('Cleared! Using Offline Corridor Model');
+    setSaveStatus('Cleared! Using 100% Free Open Engine ($0)');
+    setUsageStats(quotaGuard.getStats());
     setTimeout(() => {
       setSaveStatus(null);
       onClose();
     }, 900);
   };
 
+  const handleToggleHardStop = (enabled: boolean) => {
+    quotaGuard.setHardStopEnabled(enabled);
+    setUsageStats(quotaGuard.getStats());
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+      <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+          className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
         >
           <X className="w-5 h-5" />
         </button>
 
+        {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 rounded-xl bg-orange-50 text-orange-600">
+          <div className="p-2.5 rounded-2xl bg-orange-50 text-orange-600">
             <Key className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900">{t.apiKeyTitle}</h3>
+            <h3 className="text-lg font-black text-slate-900">{t.apiKeyTitle}</h3>
             <p className="text-xs text-slate-500">{t.apiKeySettings}</p>
           </div>
         </div>
 
-        <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-          {t.apiKeyDescription}
-        </p>
+        {/* Zero-Spend Protection Banner */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span className="text-xs font-black text-emerald-900">
+                Zero-Spend Safety Guardrail Active
+              </span>
+            </div>
+            <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900">
+              ₹0.00 Cost Guarantee
+            </span>
+          </div>
+          <p className="text-[11px] text-emerald-800 leading-relaxed">
+            The safety circuit breaker tracks your API calls in real time. If your usage hits the daily limit, it <strong>automatically stops</strong> querying Google and switches to the 100% Free OpenStreetMap engine to prevent any charges.
+          </p>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-start gap-2.5 text-xs text-amber-900">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <span>
-            Keys entered here remain strictly inside your browser's private local storage. They are never sent to third-party tracking servers.
-          </span>
+          {/* Usage Meter */}
+          <div className="pt-1 space-y-1">
+            <div className="flex justify-between text-[11px] font-bold text-emerald-900">
+              <span>Google API Calls Today: {usageStats.todayCalls} / {usageStats.dailyLimit}</span>
+              <span>{usageStats.remainingToday} calls remaining</span>
+            </div>
+            <div className="w-full bg-emerald-200/60 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, (usageStats.todayCalls / usageStats.dailyLimit) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-3 mb-5">
+        {/* Inputs */}
+        <div className="space-y-4 mb-5">
+          {/* Google Key */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Google Cloud API Key (Routes API v2 enabled)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Google Cloud API Key (Optional)
+              </label>
+              <span className="text-[11px] text-slate-400">Routes API v2</span>
+            </div>
             <input
               type="password"
               value={keyValue}
               onChange={(e) => setKeyValue(e.target.value)}
-              placeholder="AIzaSy..."
-              className="w-full px-3.5 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="AIzaSy... (Leave empty for 100% free mode)"
+              className="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
             />
           </div>
 
+          {/* Daily Limit Cap */}
+          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                Daily Free Cap
+              </label>
+              <input
+                type="number"
+                min="5"
+                max="500"
+                value={dailyLimitInput}
+                onChange={(e) => setDailyLimitInput(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+              />
+              <span className="text-[10px] text-slate-400">Calls per day</span>
+            </div>
+
+            <div className="flex flex-col justify-center">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={usageStats.hardStopEnabled}
+                  onChange={(e) => handleToggleHardStop(e.target.checked)}
+                  className="rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
+                />
+                <span>Hard Stop at Cap</span>
+              </label>
+              <span className="text-[10px] text-slate-400 mt-0.5">
+                Switches to Free Engine
+              </span>
+            </div>
+          </div>
+
+          {/* Supabase backend */}
           <div className="pt-2 border-t border-slate-100">
             <div className="flex items-center gap-1.5 mb-2">
               <Database className="w-4 h-4 text-emerald-600" />
@@ -113,19 +201,27 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 type="text"
                 value={sbUrl}
                 onChange={(e) => setSbUrl(e.target.value)}
-                placeholder="https://xyz.supabase.co"
-                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                placeholder="https://xyz.supabase.co (Leave empty for local storage)"
+                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
               />
               <input
                 type="password"
                 value={sbKey}
                 onChange={(e) => setSbKey(e.target.value)}
                 placeholder="Anon / Public Key"
-                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              If left empty, GharPahucho uses built-in local PostGIS storage with simulated corridor feeds.
+          </div>
+
+          {/* Extra Google Cloud Hard-Cap Tips */}
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Recommended Google Cloud Console Setting:</span>
+            </div>
+            <p>
+              In Google Cloud Console under <strong>APIs & Services → Routes API → Quotas</strong>, set a daily quota cap of <strong>50 requests/day</strong>. That way, Google itself will block any calls past the free threshold.
             </p>
           </div>
         </div>
@@ -140,14 +236,14 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         <div className="flex gap-2">
           <button
             onClick={handleSave}
-            className="flex-1 py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-md transition-colors text-sm"
+            className="flex-1 py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl shadow-md transition-colors text-sm"
           >
             {t.saveKey}
           </button>
           {currentApiKey && (
             <button
               onClick={handleClear}
-              className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm flex items-center gap-1.5"
+              className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-2xl transition-colors text-sm flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               {t.clearKey}
