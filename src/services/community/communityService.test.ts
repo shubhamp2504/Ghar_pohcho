@@ -100,8 +100,22 @@ describe('CommunityService (Intelligence & Verification)', () => {
       [18.5362, 73.8940], // Pune
     ];
 
+    // Submit one report on Khandala (along Mumbai-Pune) and one in Gurgaon (Delhi)
+    await service.submitReport({
+      category: 'HEAVY_TRAFFIC',
+      roadName: 'Khandala Ghat Section',
+      lat: 18.7720,
+      lng: 73.3810,
+    });
+
+    await service.submitReport({
+      category: 'WATERLOGGING',
+      roadName: 'Hero Honda Chowk Gurgaon',
+      lat: 28.4420,
+      lng: 77.0180,
+    });
+
     const reports = await service.getActiveReports();
-    // Pre-seeded reports include Khandala (close to route) and Hero Honda Chowk Gurgaon (far away in Delhi)
     const filtered = service.filterReportsAlongRoute(reports, routePolyline, 5000); // 5km buffer
 
     expect(filtered.length).toBeGreaterThan(0);

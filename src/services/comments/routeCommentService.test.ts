@@ -14,15 +14,28 @@ describe('RouteCommentService', () => {
   });
 
   it('filters comments strictly by corridor so routes are not combined', async () => {
+    await routeCommentService.postComment({
+      corridorKey: 'mumbai_pune',
+      authorName: 'Mumbai Driver',
+      tag: 'CLEAR_ROAD',
+      text: 'Expressway is clear today.',
+    });
+
+    await routeCommentService.postComment({
+      corridorKey: 'delhi_jaipur',
+      authorName: 'Delhi Driver',
+      tag: 'CONSTRUCTION',
+      text: 'Lane work in Dharuhera.',
+    });
+
     const mumbaiComments = await routeCommentService.getCommentsForCorridor('mumbai_pune');
     const delhiComments = await routeCommentService.getCommentsForCorridor('delhi_jaipur');
 
-    expect(mumbaiComments.length).toBeGreaterThan(0);
-    expect(delhiComments.length).toBeGreaterThan(0);
+    expect(mumbaiComments.length).toBe(1);
+    expect(delhiComments.length).toBe(1);
 
-    // Verify no Mumbai comments leak into Delhi
-    expect(mumbaiComments.every((c) => c.corridorKey === 'mumbai_pune')).toBe(true);
-    expect(delhiComments.every((c) => c.corridorKey === 'delhi_jaipur')).toBe(true);
+    expect(mumbaiComments[0].corridorKey).toBe('mumbai_pune');
+    expect(delhiComments[0].corridorKey).toBe('delhi_jaipur');
   });
 
   it('allows posting a new comment and retrieving it at the top', async () => {
@@ -43,16 +56,21 @@ describe('RouteCommentService', () => {
   });
 
   it('handles upvoting comments cleanly without double votes', async () => {
-    const comments = await routeCommentService.getCommentsForCorridor('mumbai_pune');
-    const firstComment = comments[0];
-    const initialUpvotes = firstComment.upvotes;
+    const comment = await routeCommentService.postComment({
+      corridorKey: 'mumbai_pune',
+      authorName: 'Traveller 1',
+      tag: 'CLEAR_ROAD',
+      text: 'Road is clear.',
+    });
 
-    const res1 = await routeCommentService.upvoteComment(firstComment.id);
+    const initialUpvotes = comment.upvotes;
+
+    const res1 = await routeCommentService.upvoteComment(comment.id);
     expect(res1.upvotes).toBe(initialUpvotes + 1);
     expect(res1.alreadyVoted).toBe(false);
 
     // Try upvoting again
-    const res2 = await routeCommentService.upvoteComment(firstComment.id);
+    const res2 = await routeCommentService.upvoteComment(comment.id);
     expect(res2.upvotes).toBe(initialUpvotes + 1);
     expect(res2.alreadyVoted).toBe(true);
   });

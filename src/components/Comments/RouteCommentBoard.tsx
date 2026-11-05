@@ -71,12 +71,16 @@ const TAG_CONFIG: Record<
   },
 };
 
-function formatTimeAgo(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const mins = Math.max(1, Math.round(diffMs / (60 * 1000)));
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ago`;
+function formatCommentDate(isoString: string): string {
+  const d = new Date(isoString);
+  const isToday = d.toDateString() === new Date().toDateString();
+  const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (isToday) {
+    const diffMs = Date.now() - d.getTime();
+    const mins = Math.max(1, Math.round(diffMs / 60000));
+    return mins < 60 ? `Today, ${mins}m ago` : `Today at ${timeStr}`;
+  }
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
 }
 
 export const RouteCommentBoard: React.FC<RouteCommentBoardProps> = ({
@@ -297,8 +301,21 @@ export const RouteCommentBoard: React.FC<RouteCommentBoardProps> = ({
       {/* Comments List */}
       <div className="space-y-3">
         {filteredComments.length === 0 ? (
-          <div className="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
-            No updates posted under this filter yet. Be the first to share!
+          <div className="text-center py-6 px-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 space-y-1">
+            <p className="font-bold text-slate-700">
+              {language === 'hi'
+                ? 'आज के लिए अभी तक कोई टिप्पणी पोस्ट नहीं की गई है।'
+                : language === 'mr'
+                ? 'आजसाठी अजून कोणतीही प्रतिक्रिया नोंदवलेली नाही.'
+                : 'No comments posted yet for today.'}
+            </p>
+            <p className="text-[11px] text-slate-500">
+              {language === 'hi'
+                ? 'क्या आप इस रूट पर हैं? ताज़ा सड़क स्थिति या सुझाव शेयर करें।'
+                : language === 'mr'
+                ? 'तुम्ही या मार्गावर आहात का? थेट रस्ता स्थिती किंवा सल्ला नोंदवा.'
+                : 'Travelling this route right now? Share the current road condition, weather, or Fastag lane status to help other travellers!'}
+            </p>
           </div>
         ) : (
           filteredComments.map((c) => {
@@ -328,9 +345,9 @@ export const RouteCommentBoard: React.FC<RouteCommentBoardProps> = ({
                     </span>
                   </div>
 
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 shrink-0">
-                    <Clock className="w-3 h-3" />
-                    {formatTimeAgo(c.createdAt)}
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1 shrink-0 font-medium">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <span>{formatCommentDate(c.createdAt)}</span>
                   </span>
                 </div>
 

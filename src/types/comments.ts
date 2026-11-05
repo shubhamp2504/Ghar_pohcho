@@ -25,3 +25,4 @@ export interface CreateCommentInput {
   tag: CommentTag;
   text: string;
 }
+

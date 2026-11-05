@@ -12,3 +12,4 @@ export interface HighwayWaypoint {
   isOrigin?: boolean;
   isDestination?: boolean;
 }
+

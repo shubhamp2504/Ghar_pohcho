@@ -3,74 +3,6 @@ import type { RouteComment, CreateCommentInput } from '../../types/comments';
 const STORAGE_KEY = 'gharpahucho_route_comments_v1';
 const UPVOTED_KEY = 'gharpahucho_upvoted_comment_ids';
 
-const SEEDED_COMMENTS: RouteComment[] = [
-  // --- Mumbai to Pune Corridor ---
-  {
-    id: 'comm_mp_1',
-    corridorKey: 'mumbai_pune',
-    authorName: 'Highway Regular (Honda City)',
-    locationTag: 'Near Khandala Ghat (KM 74)',
-    tag: 'CLEAR_ROAD',
-    text: 'Ghat section is completely clear now. Earlier drizzle has stopped, road is dry and traffic moving at 70-80 km/h.',
-    createdAt: new Date(Date.now() - 14 * 60 * 1000).toISOString(), // 14 mins ago
-    upvotes: 8,
-  },
-  {
-    id: 'comm_mp_2',
-    corridorKey: 'mumbai_pune',
-    authorName: 'Priya K. (Commuter)',
-    locationTag: 'Khalapur Toll Plaza (KM 54)',
-    tag: 'FASTAG_DELAY',
-    text: 'Fastag lane 2 scanner was restarting. Recommend taking extreme left lanes (4 or 5) for quick 30-second clearance.',
-    createdAt: new Date(Date.now() - 32 * 60 * 1000).toISOString(), // 32 mins ago
-    upvotes: 14,
-  },
-  {
-    id: 'comm_mp_3',
-    corridorKey: 'mumbai_pune',
-    authorName: 'Rohan D. (SUV)',
-    locationTag: 'Urse Food Mall (KM 96)',
-    tag: 'GENERAL_TIP',
-    text: 'Urse food court has ample clean parking right now. Tata Power DC charger has 1 gun available if you need a quick 20 min top-up.',
-    createdAt: new Date(Date.now() - 55 * 60 * 1000).toISOString(), // 55 mins ago
-    upvotes: 6,
-  },
-
-  // --- Delhi to Jaipur Corridor ---
-  {
-    id: 'comm_dj_1',
-    corridorKey: 'delhi_jaipur',
-    authorName: 'Vikas Sharma',
-    locationTag: 'Dharuhera Flyover (KM 68)',
-    tag: 'CONSTRUCTION',
-    text: 'Flyover maintenance on left lane after Dharuhera. Stay in center lane to avoid sudden braking.',
-    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-    upvotes: 11,
-  },
-  {
-    id: 'comm_dj_2',
-    corridorKey: 'delhi_jaipur',
-    authorName: 'Delhi Commuter',
-    locationTag: 'Kherki Daula Toll',
-    tag: 'CLEAR_ROAD',
-    text: 'Toll plaza moving very smoothly today. Under 2 minutes clearance.',
-    createdAt: new Date(Date.now() - 48 * 60 * 1000).toISOString(),
-    upvotes: 5,
-  },
-
-  // --- Bengaluru to Mysuru Corridor ---
-  {
-    id: 'comm_bm_1',
-    corridorKey: 'bengaluru_mysuru',
-    authorName: 'Karthik N.',
-    locationTag: 'Ramanagara Bypass',
-    tag: 'CLEAR_ROAD',
-    text: 'Expressway surface is spotless. Speed cameras active near Bidadi, maintain 100 km/h limit.',
-    createdAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-    upvotes: 19,
-  },
-];
-
 export class RouteCommentService {
   /**
    * Generates a stable corridor identifier based on origin and destination names.
@@ -119,17 +51,27 @@ export class RouteCommentService {
   }
 
   /**
-   * Fetches all comments for a given corridor, sorted newest first
+   * Fetches only REAL user comments posted for TODAY on a given corridor.
+   * Previous days' data is excluded to ensure drivers only see live relevant road status.
    */
   async getCommentsForCorridor(corridorKey: string): Promise<RouteComment[]> {
     const all = this.loadAllComments();
+    const todayStr = new Date().toDateString();
+
     return all
-      .filter((c) => c.corridorKey === corridorKey)
+      .filter((c) => {
+        if (c.corridorKey !== corridorKey) return false;
+        // Verify comment is from today (or last 18 hours max)
+        const commentDate = new Date(c.createdAt);
+        const isToday = commentDate.toDateString() === todayStr;
+        const isRecent = Date.now() - commentDate.getTime() < 18 * 3600 * 1000;
+        return isToday || isRecent;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   /**
-   * Posts a new user comment to the corridor board
+   * Posts a new user comment to the corridor board with authenticated current timestamp
    */
   async postComment(input: CreateCommentInput): Promise<RouteComment> {
     const newComment: RouteComment = {
@@ -181,16 +123,15 @@ export class RouteCommentService {
   }
 
   private loadAllComments(): RouteComment[] {
-    if (typeof window === 'undefined') return [...SEEDED_COMMENTS];
+    if (typeof window === 'undefined') return [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) {
-        this.saveAllComments(SEEDED_COMMENTS);
-        return [...SEEDED_COMMENTS];
+        return [];
       }
       return JSON.parse(raw) as RouteComment[];
     } catch {
-      return [...SEEDED_COMMENTS];
+      return [];
     }
   }
 

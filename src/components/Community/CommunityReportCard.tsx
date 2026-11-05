@@ -102,8 +102,9 @@ export const CommunityReportCard: React.FC<CommunityReportCardProps> = ({
           )}
         </div>
 
-        <span className="text-xs font-semibold text-slate-400 shrink-0">
-          {minutesAgo} {t.minsAgo}
+        <span className="text-[11px] font-semibold text-slate-500 shrink-0 flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+          <Clock className="w-3 h-3 text-slate-400" />
+          <span>Active Today • {minutesAgo}m ago</span>
         </span>
       </div>
 

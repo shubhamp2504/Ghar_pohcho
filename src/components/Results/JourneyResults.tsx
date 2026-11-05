@@ -60,23 +60,29 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
   const delayInfo = formatDelay(selectedRoute.additionalDelaySeconds, language);
 
   const loadReports = useCallback(async () => {
-    const all = await communityService.getActiveReports();
+    // 1. Fetch real live incidents along this corridor from live traffic sensors
+    const liveSensorIncidents = await communityService.fetchLiveRoadIncidents(selectedRoute.polyline);
+    // 2. Fetch authentic user reports submitted today
+    const userReports = await communityService.getActiveReports();
     const alongRoute = communityService.filterReportsAlongRoute(
-      all,
+      [...liveSensorIncidents, ...userReports],
       selectedRoute.polyline,
-      6000 // 6km buffer
+      5000
     );
     setCorridorReports(alongRoute);
   }, [selectedRoute.polyline]);
 
   useEffect(() => {
     let isMounted = true;
-    communityService.getActiveReports().then((all) => {
+    Promise.all([
+      communityService.fetchLiveRoadIncidents(selectedRoute.polyline),
+      communityService.getActiveReports(),
+    ]).then(([liveSensorIncidents, userReports]) => {
       if (!isMounted) return;
       const along = communityService.filterReportsAlongRoute(
-        all,
+        [...liveSensorIncidents, ...userReports],
         selectedRoute.polyline,
-        6000
+        5000
       );
       setCorridorReports(along);
     });

@@ -62,3 +62,4 @@ describe('IntermediateTownsService', () => {
     expect(waypoints[waypoints.length - 1].distanceKm).toBe(80);
   });
 });
+
