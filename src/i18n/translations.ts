@@ -48,7 +48,8 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceHistorical: 'Historical Traffic Estimate',
     dataConfidenceApprox: 'Planning Estimate',
     sourceGoogle: 'Google Routes API',
-    sourceMock: 'Offline Corridor Fixture',
+    sourceFree: '100% Free Engine (OSRM + Community)',
+    sourceMock: '100% Free Engine ($0)',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'Congestion Bottlenecks Along Route',
@@ -168,7 +169,8 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceHistorical: 'ऐतिहासिक ट्रैफ़िक अनुमान',
     dataConfidenceApprox: 'अनुमानित योजना समय',
     sourceGoogle: 'गूगल रूट्स एपीआई',
-    sourceMock: 'ऑफ़लाइन हाईवे डेटा',
+    sourceFree: '१००% मुफ़्त इंजन (OSRM + समुदाय)',
+    sourceMock: '१००% मुफ़्त इंजन (₹०)',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'मार्ग में मुख्य ट्रैफ़िक जाम',
@@ -288,7 +290,8 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceHistorical: 'मागील अनुभवानुसार अंदाज',
     dataConfidenceApprox: 'नियोजन अंदाज',
     sourceGoogle: 'गुगल रूट्स एपीआय',
-    sourceMock: 'ऑफलाईन महामार्ग मॉडेल',
+    sourceFree: '१००% मोफत इंजिन (OSRM + समुदाय)',
+    sourceMock: '१००% मोफत इंजिन (₹०)',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'मार्गावरील प्रमुख वाहतूक कोंडी',

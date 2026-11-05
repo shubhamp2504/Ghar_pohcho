@@ -4,6 +4,8 @@ import { GoogleRoutesProvider } from './googleRoutesProvider';
 import { MockRoutingProvider } from './mockRoutingProvider';
 import type { LocationPoint } from '../../types/routing';
 
+import { FreeOsrmRoutingProvider } from './freeOsrmProvider';
+
 describe('RoutingService & Providers Integration', () => {
   let service: RoutingService;
 
@@ -107,5 +109,20 @@ describe('RoutingService & Providers Integration', () => {
     expect(result.routes.length).toBeGreaterThanOrEqual(2);
     expect(result.routes[0].polyline.length).toBeGreaterThan(2);
     expect(result.routes[0].additionalDelaySeconds).toBeGreaterThanOrEqual(0);
+  });
+
+  it('verifies FreeOsrmRoutingProvider requires no API key and calculates 100% free routes', async () => {
+    const freeProvider = new FreeOsrmRoutingProvider();
+    expect(freeProvider.isConfigured()).toBe(true);
+
+    const result = await freeProvider.calculateRoutes({
+      origin: mumbai,
+      destination: pune,
+    });
+
+    expect(result.routes.length).toBeGreaterThanOrEqual(1);
+    expect(result.routes[0].distanceMeters).toBeGreaterThan(120000);
+    expect(result.routes[0].polyline.length).toBeGreaterThan(5);
+    expect(result.disclaimer).toContain('zero API costs');
   });
 });

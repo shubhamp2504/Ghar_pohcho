@@ -44,3 +44,4 @@ export interface ConfirmationInput {
 }
 
 export type AbuseReason = 'SPAM' | 'INCORRECT_LOCATION' | 'OFFENSIVE' | 'FAKE';
+

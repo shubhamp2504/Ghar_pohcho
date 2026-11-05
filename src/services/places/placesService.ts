@@ -51,35 +51,91 @@ export class PlacesService implements IPlacesProvider {
 
     const cleanQuery = query.toLowerCase().trim();
 
-    const matches = INDIAN_PLACES_DATABASE.filter(
+    // 1. Instant local index lookup
+    const localMatches = INDIAN_PLACES_DATABASE.filter(
       (p) =>
         p.name.toLowerCase().includes(cleanQuery) ||
         (p.address && p.address.toLowerCase().includes(cleanQuery))
     );
 
-    return matches.slice(0, 6);
+    if (localMatches.length >= 4) {
+      return localMatches.slice(0, 6);
+    }
+
+    // 2. 100% Free OpenStreetMap Photon geocoder (Zero API Key, Zero Cost)
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&bbox=68,6,97,37`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.features && json.features.length > 0) {
+          const apiMatches: LocationPoint[] = json.features.map(
+            (f: {
+              geometry: { coordinates: [number, number] };
+              properties: { name?: string; city?: string; state?: string; country?: string };
+            }) => {
+              const name = f.properties.name || f.properties.city || 'Location';
+              const parts = [f.properties.city, f.properties.state, f.properties.country].filter(Boolean);
+              return {
+                name: `${name}${f.properties.city ? `, ${f.properties.city}` : ''}`,
+                address: parts.join(', '),
+                lat: f.geometry.coordinates[1],
+                lng: f.geometry.coordinates[0],
+              };
+            }
+          );
+
+          // Combine with deduplication
+          const combined = [...localMatches];
+          apiMatches.forEach((m) => {
+            if (!combined.some((c) => Math.abs(c.lat - m.lat) < 0.01 && Math.abs(c.lng - m.lng) < 0.01)) {
+              combined.push(m);
+            }
+          });
+          return combined.slice(0, 6);
+        }
+      }
+    } catch {
+      // Fallback silently to local matches
+    }
+
+    return localMatches.slice(0, 6);
   }
 
   async reverseGeocode(lat: number, lng: number): Promise<LocationPoint> {
-    // Find closest known landmark in database within ~10km, or return standard geocoded point
-    let closest: LocationPoint | null = null;
-    let minDist = Infinity;
-
+    // 1. Check local proximity
     for (const place of INDIAN_PLACES_DATABASE) {
       const dist = Math.hypot(place.lat - lat, place.lng - lng);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = place;
+      if (dist < 0.05) {
+        return {
+          name: `Near ${place.name}`,
+          address: place.address,
+          lat,
+          lng,
+        };
       }
     }
 
-    if (closest && minDist < 0.08) {
-      return {
-        name: `Near ${closest.name}`,
-        address: closest.address,
-        lat,
-        lng,
-      };
+    // 2. Free OpenStreetMap reverse lookup
+    try {
+      const url = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.features && json.features.length > 0) {
+          const prop = json.features[0].properties;
+          const name = prop.name || prop.street || prop.city || 'Detected Location';
+          const parts = [prop.city, prop.state, prop.country].filter(Boolean);
+          return {
+            name,
+            address: parts.join(', '),
+            lat,
+            lng,
+          };
+        }
+      }
+    } catch {
+      // Fallback
     }
 
     return {

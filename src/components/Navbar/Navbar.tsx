@@ -67,8 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-                <span className="hidden md:inline">Corridor Simulation</span>
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden md:inline font-bold text-emerald-700">100% Free Engine ($0)</span>
               </>
             )}
             <Key className="w-3.5 h-3.5 text-slate-400" />

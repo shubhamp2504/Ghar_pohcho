@@ -4,6 +4,7 @@ import type {
   LocationPoint,
 } from '../../types/routing';
 import { GoogleRoutesProvider } from './googleRoutesProvider';
+import { FreeOsrmRoutingProvider } from './freeOsrmProvider';
 import { MockRoutingProvider } from './mockRoutingProvider';
 
 const API_KEY_STORAGE_KEY = 'gharpahucho_google_api_key';
@@ -11,11 +12,13 @@ const RECENT_SEARCHES_STORAGE_KEY = 'gharpahucho_recent_searches';
 
 export class RoutingService {
   private googleProvider: GoogleRoutesProvider;
+  private freeOsrmProvider: FreeOsrmRoutingProvider;
   private mockProvider: MockRoutingProvider;
 
   constructor() {
     const savedKey = this.getStoredApiKey();
     this.googleProvider = new GoogleRoutesProvider(savedKey);
+    this.freeOsrmProvider = new FreeOsrmRoutingProvider();
     this.mockProvider = new MockRoutingProvider();
   }
 
@@ -44,23 +47,27 @@ export class RoutingService {
   }
 
   async calculateRoutes(request: RouteRequest): Promise<RouteCalculationResult> {
-    // If Google API is configured, attempt live call first
+    // 1. If user specifically configured a paid Google Cloud key, use it
     if (this.googleProvider.isConfigured()) {
       try {
         const result = await this.googleProvider.calculateRoutes(request);
         this.saveRecentSearch(request.origin, request.destination);
         return result;
       } catch (err: unknown) {
-        console.warn('Google Routes API failed, falling back to Corridor Fixture:', err);
-        const fallbackResult = await this.mockProvider.calculateRoutes(request);
-        const errorMsg = err instanceof Error ? err.message : 'API connection failed';
-        fallbackResult.disclaimer = `Live Google Routes API error (${errorMsg}). Displaying offline historical corridor model.`;
-        this.saveRecentSearch(request.origin, request.destination);
-        return fallbackResult;
+        console.warn('Google Routes API failed, falling back to 100% Free OSRM Engine:', err);
       }
     }
 
-    // Default to Offline / Dev Corridor Fixture
+    // 2. Default: 100% Free OpenStreetMap & Community Traffic Engine (Zero Cost, No Credit Card)
+    try {
+      const result = await this.freeOsrmProvider.calculateRoutes(request);
+      this.saveRecentSearch(request.origin, request.destination);
+      return result;
+    } catch (osrmErr) {
+      console.warn('OSRM network request failed, falling back to Offline Highway Corridor fixture:', osrmErr);
+    }
+
+    // 3. Resilient Offline Fallback
     const result = await this.mockProvider.calculateRoutes(request);
     this.saveRecentSearch(request.origin, request.destination);
     return result;

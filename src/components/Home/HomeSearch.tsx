@@ -178,9 +178,9 @@ export const HomeSearch: React.FC<HomeSearchProps> = ({
     <div className="w-full max-w-2xl mx-auto px-4 py-6 md:py-10" ref={searchContainerRef}>
       {/* Hero Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100/80 text-orange-800 text-xs font-bold mb-3 border border-orange-200/80">
-          <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-          <span>India Highway & Intercity Traffic Intel</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold mb-3 border border-emerald-200">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+          <span>100% Free • Open Road Network & Traffic Intel</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
           {t.heroHeadline}

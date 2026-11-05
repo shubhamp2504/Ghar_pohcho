@@ -159,3 +159,4 @@ DROP POLICY IF EXISTS "Insert route cache" ON public.route_search_cache;
 CREATE POLICY "Insert route cache"
 ON public.route_search_cache FOR INSERT
 WITH CHECK (true);
+
