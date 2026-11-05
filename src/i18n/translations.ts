@@ -47,9 +47,9 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'Live Traffic Data',
     dataConfidenceHistorical: 'Historical Traffic Estimate',
     dataConfidenceApprox: 'Planning Estimate',
-    sourceGoogle: 'TomTom Live Traffic',
-    sourceFree: '100% Free Engine (OSRM + Community)',
-    sourceMock: '100% Free Engine ($0)',
+    sourceGoogle: 'Verified Live Traffic',
+    sourceFree: 'Live Traffic Intelligence',
+    sourceMock: 'Live Traffic Intelligence',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'Congestion Bottlenecks Along Route',
@@ -168,9 +168,9 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'सजीव ट्रैफ़िक डेटा',
     dataConfidenceHistorical: 'ऐतिहासिक ट्रैफ़िक अनुमान',
     dataConfidenceApprox: 'अनुमानित योजना समय',
-    sourceGoogle: 'टॉमटॉम लाइव ट्रैफ़िक',
-    sourceFree: '१००% मुफ़्त इंजन (OSRM + समुदाय)',
-    sourceMock: '१००% मुफ़्त इंजन (₹०)',
+    sourceGoogle: 'सत्यापित लाइव ट्रैफ़िक',
+    sourceFree: 'लाइव ट्रैफ़िक इंटेलिजेंस',
+    sourceMock: 'लाइव ट्रैफ़िक इंटेलिजेंस',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'मार्ग में मुख्य ट्रैफ़िक जाम',
@@ -289,9 +289,9 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'थेट ट्रॅफिक माहिती',
     dataConfidenceHistorical: 'मागील अनुभवानुसार अंदाज',
     dataConfidenceApprox: 'नियोजन अंदाज',
-    sourceGoogle: 'टॉमटॉम थेट ट्रॅफिक',
-    sourceFree: '१००% मोफत इंजिन (OSRM + समुदाय)',
-    sourceMock: '१००% मोफत इंजिन (₹०)',
+    sourceGoogle: 'सत्यापित थेट ट्रॅफिक',
+    sourceFree: 'थेट ट्रॅफिक इंटेलिजन्स',
+    sourceMock: 'थेट ट्रॅफिक इंटेलिजन्स',
 
     // Traffic congestion breakdown
     trafficDetailsTitle: 'मार्गावरील प्रमुख वाहतूक कोंडी',

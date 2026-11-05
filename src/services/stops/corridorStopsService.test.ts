@@ -54,3 +54,4 @@ describe('CorridorStopsService', () => {
     expect(foodStops.every((s) => s.category === 'DHABA_FOOD')).toBe(true);
   });
 });
+

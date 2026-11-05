@@ -31,6 +31,8 @@ import { CommunityReportCard } from '../Community/CommunityReportCard';
 import { ReportIncidentModal } from '../Community/ReportIncidentModal';
 import { CorridorStopsSection } from '../Stops/CorridorStopsSection';
 import { InCarDriveMode } from '../Navigation/InCarDriveMode';
+import { HighwayWaypointsTimeline } from '../Timeline/HighwayWaypointsTimeline';
+import { RouteCommentBoard } from '../Comments/RouteCommentBoard';
 import { communityService } from '../../services/community/communityService';
 
 interface JourneyResultsProps {
@@ -436,6 +438,14 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
         </div>
       </div>
 
+      {/* In-Between Highway Towns & Milestone Timeline (Section 9) */}
+      <HighwayWaypointsTimeline
+        route={selectedRoute}
+        origin={result.origin}
+        destination={result.destination}
+        language={language}
+      />
+
       {/* Congestion Bottlenecks List (Section 5.D & 11) */}
       <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-lg border border-slate-200/80">
         <div className="flex items-center justify-between mb-4">
@@ -568,6 +578,13 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Route-Specific Live Community Comment & Experience Box */}
+      <RouteCommentBoard
+        origin={result.origin}
+        destination={result.destination}
+        language={language}
+      />
 
       {/* Best Time to Leave Planner Preview (Section 6) */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-5 sm:p-7 text-white shadow-xl">

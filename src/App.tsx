@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Navbar } from './components/Navbar/Navbar';
 import { HomeSearch } from './components/Home/HomeSearch';
 import { JourneyResults } from './components/Results/JourneyResults';
-import { ApiKeyModal } from './components/Modal/ApiKeyModal';
 import type { Language, LocationPoint, RouteCalculationResult } from './types/routing';
 import { routingService } from './services/routing/routingService';
 import { translations } from './i18n/translations';
@@ -24,8 +23,6 @@ export function App() {
   const [activeView, setActiveView] = useState<'HOME' | 'RESULTS'>('HOME');
   const [currentResult, setCurrentResult] = useState<RouteCalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [hasCustomApiKey, setHasCustomApiKey] = useState(() => routingService.hasConfiguredLiveKey());
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
@@ -57,11 +54,6 @@ export function App() {
     }
   };
 
-  const handleSaveApiKey = (key: string | null) => {
-    routingService.setApiKey(key);
-    setHasCustomApiKey(routingService.hasConfiguredLiveKey());
-  };
-
   const t = translations[language];
 
   return (
@@ -70,8 +62,6 @@ export function App() {
       <Navbar
         currentLanguage={language}
         onLanguageChange={handleLanguageChange}
-        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-        hasCustomApiKey={hasCustomApiKey}
         onResetToHome={() => setActiveView('HOME')}
       />
 
@@ -110,15 +100,6 @@ export function App() {
           </div>
         </div>
       </footer>
-
-      {/* API Key Configuration Modal */}
-      <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-        currentApiKey={routingService.getStoredApiKey()}
-        onSaveKey={handleSaveApiKey}
-        language={language}
-      />
     </div>
   );
 }

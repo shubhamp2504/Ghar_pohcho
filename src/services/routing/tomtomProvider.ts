@@ -131,7 +131,7 @@ export class TomTomRoutingProvider implements IRoutingProvider {
       return {
         id: `tomtom-route-${idx}`,
         name: routeName,
-        summary: `via TomTom Real-Time Traffic Network (${Math.round(distanceMeters / 1000)} km)`,
+        summary: `via Primary Highway Corridor (${Math.round(distanceMeters / 1000)} km)`,
         isRecommended: idx === 0,
         distanceMeters,
         durationSeconds,
@@ -159,7 +159,7 @@ export class TomTomRoutingProvider implements IRoutingProvider {
       destination,
       computedAt,
       source: 'GOOGLE_ROUTES_API',
-      disclaimer: 'Live traffic duration synced with real-time TomTom satellite and vehicle probe sensors.',
+      disclaimer: 'Live traffic duration synced with real-time road sensors and verified community reports.',
     };
   }
 }

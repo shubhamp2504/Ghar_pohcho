@@ -21,3 +21,4 @@ export interface CorridorStop {
   is24x7: boolean;
   notes?: string;
 }
+

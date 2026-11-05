@@ -1,21 +1,17 @@
 import React from 'react';
-import { Home, Key, Globe, ShieldCheck, Sparkles } from 'lucide-react';
+import { Home, Globe } from 'lucide-react';
 import type { Language } from '../../types/routing';
 import { translations } from '../../i18n/translations';
 
 interface NavbarProps {
   currentLanguage: Language;
   onLanguageChange: (lang: Language) => void;
-  onOpenApiKeyModal: () => void;
-  hasCustomApiKey: boolean;
   onResetToHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentLanguage,
   onLanguageChange,
-  onOpenApiKeyModal,
-  hasCustomApiKey,
   onResetToHome,
 }) => {
   const t = translations[currentLanguage];
@@ -50,29 +46,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* API Key Status Pill */}
-          <button
-            onClick={onOpenApiKeyModal}
-            title={t.apiKeySettings}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              hasCustomApiKey
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-            }`}
-          >
-            {hasCustomApiKey ? (
-              <>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden md:inline font-bold text-emerald-700">TomTom Live Traffic</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden md:inline font-bold text-emerald-700">100% Free Engine ($0)</span>
-              </>
-            )}
-            <Key className="w-3.5 h-3.5 text-slate-400" />
-          </button>
+          {/* Live Intelligence Indicator (Consumer Grade, No Keys Exposed) */}
+          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden sm:inline">
+              {currentLanguage === 'hi' ? 'लाइव ट्रैफ़िक सक्रिय' : currentLanguage === 'mr' ? 'थेट वाहतूक सक्रिय' : 'Live Traffic Active'}
+            </span>
+          </div>
 
           {/* Multilingual Selector */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">

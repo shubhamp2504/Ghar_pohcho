@@ -48,14 +48,18 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         attributionControl: false,
       }).setView([19.076, 72.8777], 9);
 
-      // Clean base tile layer (CartoDB Voyager)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      // Clean base tile layer: Use OpenStreetMap Standard (100% open, zero watermark) or TomTom main map
+      const baseMapUrl = tomtomKey
+        ? `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${tomtomKey}`
+        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      L.tileLayer(baseMapUrl, {
         maxZoom: 19,
-        subdomains: 'abcd',
         zIndex: 1,
+        attribution: '© OpenStreetMap contributors',
       }).addTo(map);
 
-      // TomTom Real-Time Traffic Flow & Incidents Overlay
+      // Real-Time Traffic Flow & Incidents Overlay
       if (tomtomKey) {
         const flowLayer = L.tileLayer(
           `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${tomtomKey}`,
@@ -333,7 +337,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
-            title="Toggle TomTom Live Traffic Flow tile layer"
+            title="Toggle Live Traffic Flow layer"
           >
             <span className={`w-2 h-2 rounded-full ${showTrafficFlow ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
             <span>🚦 Live Flow: {showTrafficFlow ? 'ON' : 'OFF'}</span>
@@ -347,7 +351,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                 ? 'bg-amber-100 text-amber-800 border border-amber-300'
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
-            title="Toggle TomTom Live Incidents tile layer"
+            title="Toggle Live Traffic Incidents layer"
           >
             <span>⚠️ Incidents: {showIncidents ? 'ON' : 'OFF'}</span>
           </button>
@@ -356,7 +360,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         {tomtomKey && showTrafficFlow && (
           <div className="bg-emerald-700/90 text-white backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
-            <span>TomTom Real-Time Traffic Sync</span>
+            <span>Live Highway Traffic Sync</span>
           </div>
         )}
       </div>

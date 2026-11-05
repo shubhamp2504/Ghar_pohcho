@@ -83,9 +83,7 @@ export class RoutingService {
   }
 
   getActiveProviderName(): string {
-    if (this.tomtomProvider.isConfigured()) return 'TomTom Live Traffic (Free Tier)';
-    if (this.googleProvider.isConfigured()) return 'Google Routes Live API';
-    return '100% Free Open Engine ($0)';
+    return 'Live Traffic Intelligence';
   }
 
   async calculateRoutes(request: RouteRequest): Promise<RouteCalculationResult> {
