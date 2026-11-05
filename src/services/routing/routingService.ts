@@ -79,7 +79,7 @@ export class RoutingService {
   }
 
   hasConfiguredApiKey(): boolean {
-    return this.hasConfiguredLiveKey();
+    return this.googleProvider.isConfigured();
   }
 
   getActiveProviderName(): string {

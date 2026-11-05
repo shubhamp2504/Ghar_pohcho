@@ -25,7 +25,7 @@ export function App() {
   const [currentResult, setCurrentResult] = useState<RouteCalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [hasCustomApiKey, setHasCustomApiKey] = useState(() => routingService.hasConfiguredApiKey());
+  const [hasCustomApiKey, setHasCustomApiKey] = useState(() => routingService.hasConfiguredLiveKey());
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
@@ -59,7 +59,7 @@ export function App() {
 
   const handleSaveApiKey = (key: string | null) => {
     routingService.setApiKey(key);
-    setHasCustomApiKey(routingService.hasConfiguredApiKey());
+    setHasCustomApiKey(routingService.hasConfiguredLiveKey());
   };
 
   const t = translations[language];

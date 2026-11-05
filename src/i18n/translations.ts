@@ -47,7 +47,7 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'Live Traffic Data',
     dataConfidenceHistorical: 'Historical Traffic Estimate',
     dataConfidenceApprox: 'Planning Estimate',
-    sourceGoogle: 'Google Routes API',
+    sourceGoogle: 'TomTom Live Traffic',
     sourceFree: '100% Free Engine (OSRM + Community)',
     sourceMock: '100% Free Engine ($0)',
 
@@ -168,7 +168,7 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'सजीव ट्रैफ़िक डेटा',
     dataConfidenceHistorical: 'ऐतिहासिक ट्रैफ़िक अनुमान',
     dataConfidenceApprox: 'अनुमानित योजना समय',
-    sourceGoogle: 'गूगल रूट्स एपीआई',
+    sourceGoogle: 'टॉमटॉम लाइव ट्रैफ़िक',
     sourceFree: '१००% मुफ़्त इंजन (OSRM + समुदाय)',
     sourceMock: '१००% मुफ़्त इंजन (₹०)',
 
@@ -289,7 +289,7 @@ export const translations: Record<Language, Record<string, string>> = {
     dataConfidenceRealtime: 'थेट ट्रॅफिक माहिती',
     dataConfidenceHistorical: 'मागील अनुभवानुसार अंदाज',
     dataConfidenceApprox: 'नियोजन अंदाज',
-    sourceGoogle: 'गुगल रूट्स एपीआय',
+    sourceGoogle: 'टॉमटॉम थेट ट्रॅफिक',
     sourceFree: '१००% मोफत इंजिन (OSRM + समुदाय)',
     sourceMock: '१००% मोफत इंजिन (₹०)',
 

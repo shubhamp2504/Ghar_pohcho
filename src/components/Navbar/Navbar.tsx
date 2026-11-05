@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {hasCustomApiKey ? (
               <>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden md:inline">Google Live API</span>
+                <span className="hidden md:inline font-bold text-emerald-700">TomTom Live Traffic</span>
               </>
             ) : (
               <>
