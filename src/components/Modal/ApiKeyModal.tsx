@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   X,
   Key,
-  ShieldAlert,
   CheckCircle2,
   RefreshCw,
   Database,
   ShieldCheck,
+  CreditCard,
 } from 'lucide-react';
 import type { Language } from '../../types/routing';
 import { translations } from '../../i18n/translations';
@@ -35,7 +35,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   const [usageStats, setUsageStats] = useState(() => quotaGuard.getStats());
-  const [dailyLimitInput, setDailyLimitInput] = useState(usageStats.dailyLimit.toString());
 
   if (!isOpen) return null;
 
@@ -47,11 +46,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
       setSupabaseCredentials(sbUrl.trim(), sbKey.trim());
     } else {
       setSupabaseCredentials(null, null);
-    }
-
-    const parsedLimit = parseInt(dailyLimitInput, 10);
-    if (!isNaN(parsedLimit) && parsedLimit > 0) {
-      quotaGuard.setDailyLimit(parsedLimit);
     }
 
     setSaveStatus(t.keySaved);
@@ -74,11 +68,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
       setSaveStatus(null);
       onClose();
     }, 900);
-  };
-
-  const handleToggleHardStop = (enabled: boolean) => {
-    quotaGuard.setHardStopEnabled(enabled);
-    setUsageStats(quotaGuard.getStats());
   };
 
   return (
@@ -108,28 +97,28 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <span className="text-xs font-black text-emerald-900">
-                Zero-Spend Safety Guardrail Active
+                Zero-Spend Free Quota Active
               </span>
             </div>
             <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900">
-              ₹0.00 Cost Guarantee
+              ₹0.00 / $0 Cost
             </span>
           </div>
           <p className="text-[11px] text-emerald-800 leading-relaxed">
-            The safety circuit breaker tracks your API calls in real time. If your usage hits the daily limit, it <strong>automatically stops</strong> querying Google and switches to the 100% Free OpenStreetMap engine to prevent any charges.
+            Google provides <strong>$200 in monthly free credit</strong> (~20,000 free route calculations/month). No daily restriction is applied — you can use your quota whenever you need.
           </p>
 
-          {/* Usage Meter */}
+          {/* Monthly Meter */}
           <div className="pt-1 space-y-1">
             <div className="flex justify-between text-[11px] font-bold text-emerald-900">
-              <span>Google API Calls Today: {usageStats.todayCalls} / {usageStats.dailyLimit}</span>
-              <span>{usageStats.remainingToday} calls remaining</span>
+              <span>Calls Used This Month: {usageStats.monthlyCalls} / {usageStats.monthlyLimit}</span>
+              <span>Today: {usageStats.todayCalls} calls</span>
             </div>
             <div className="w-full bg-emerald-200/60 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: `${Math.min(100, (usageStats.todayCalls / usageStats.dailyLimit) * 100)}%`,
+                  width: `${Math.min(100, (usageStats.monthlyCalls / usageStats.monthlyLimit) * 100)}%`,
                 }}
               />
             </div>
@@ -150,42 +139,23 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
               type="password"
               value={keyValue}
               onChange={(e) => setKeyValue(e.target.value)}
-              placeholder="AIzaSy... (Leave empty for 100% free mode)"
+              placeholder="AIzaSy... (Leave empty to use 100% Free Open Engine)"
               className="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
             />
           </div>
 
-          {/* Daily Limit Cap */}
-          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                Daily Free Cap
-              </label>
-              <input
-                type="number"
-                min="5"
-                max="500"
-                value={dailyLimitInput}
-                onChange={(e) => setDailyLimitInput(e.target.value)}
-                className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg bg-white"
-              />
-              <span className="text-[10px] text-slate-400">Calls per day</span>
+          {/* Payment Card / Activation Reality Notice */}
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold">
+              <CreditCard className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Does Google require a card to activate the free quota?</span>
             </div>
-
-            <div className="flex flex-col justify-center">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={usageStats.hardStopEnabled}
-                  onChange={(e) => handleToggleHardStop(e.target.checked)}
-                  className="rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
-                />
-                <span>Hard Stop at Cap</span>
-              </label>
-              <span className="text-[10px] text-slate-400 mt-0.5">
-                Switches to Free Engine
-              </span>
-            </div>
+            <p className="leading-relaxed">
+              <strong>Yes:</strong> Google Cloud does not charge you upfront, but they <strong>strictly require entering a Credit/Debit Card</strong> to verify identity and enable the API billing account (temporary ₹2 test authorization).
+            </p>
+            <p className="leading-relaxed text-amber-800">
+              💡 <strong>If you do not want to enter any card:</strong> Simply leave this field blank! GharPahucho will run completely on our <strong>100% Free OpenStreetMap engine</strong> with zero cards, zero payments, and zero signups required.
+            </p>
           </div>
 
           {/* Supabase backend */}
@@ -212,17 +182,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
               />
             </div>
-          </div>
-
-          {/* Extra Google Cloud Hard-Cap Tips */}
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1">
-            <div className="flex items-center gap-1.5 font-bold">
-              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Recommended Google Cloud Console Setting:</span>
-            </div>
-            <p>
-              In Google Cloud Console under <strong>APIs & Services → Routes API → Quotas</strong>, set a daily quota cap of <strong>50 requests/day</strong>. That way, Google itself will block any calls past the free threshold.
-            </p>
           </div>
         </div>
 

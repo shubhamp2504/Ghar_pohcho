@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { QuotaGuard } from './quotaGuard';
 import type { LocationPoint, RouteCalculationResult } from '../../types/routing';
 
-describe('QuotaGuard (Zero Spend Protection & Circuit Breaker)', () => {
+describe('QuotaGuard (Zero Spend Protection without Daily Limit)', () => {
   let guard: QuotaGuard;
 
   const mumbai: LocationPoint = {
@@ -22,41 +22,25 @@ describe('QuotaGuard (Zero Spend Protection & Circuit Breaker)', () => {
     guard = new QuotaGuard();
   });
 
-  it('initializes with conservative safety limits', () => {
+  it('initializes with full monthly free tier limit and no daily restriction', () => {
     const stats = guard.getStats();
     expect(stats.todayCalls).toBe(0);
-    expect(stats.dailyLimit).toBe(50);
-    expect(stats.remainingToday).toBe(50);
-    expect(stats.hardStopEnabled).toBe(true);
-    expect(stats.isLimitReached).toBe(false);
+    expect(stats.monthlyCalls).toBe(0);
+    expect(stats.monthlyLimit).toBe(20000); // 20k free quota
     expect(guard.canMakeGoogleCall()).toBe(true);
   });
 
-  it('records Google API calls and decrements remaining quota', () => {
+  it('records Google API calls accurately', () => {
     guard.recordGoogleCall('ROUTES');
     guard.recordGoogleCall('ROUTES');
 
     const stats = guard.getStats();
     expect(stats.todayCalls).toBe(2);
-    expect(stats.remainingToday).toBe(48);
-  });
-
-  it('trips the circuit breaker automatically when daily limit is reached', () => {
-    guard.setDailyLimit(3); // set low limit for test
-
-    guard.recordGoogleCall('ROUTES');
-    guard.recordGoogleCall('ROUTES');
+    expect(stats.monthlyCalls).toBe(2);
     expect(guard.canMakeGoogleCall()).toBe(true);
-
-    guard.recordGoogleCall('ROUTES'); // 3rd call hits limit
-    expect(guard.canMakeGoogleCall()).toBe(false);
-
-    const stats = guard.getStats();
-    expect(stats.isLimitReached).toBe(true);
-    expect(stats.remainingToday).toBe(0);
   });
 
-  it('caches routes to prevent duplicate API requests', () => {
+  it('caches routes to prevent repeating identical API requests', () => {
     const dummyResult: RouteCalculationResult = {
       routes: [],
       selectedRouteIndex: 0,
@@ -66,13 +50,10 @@ describe('QuotaGuard (Zero Spend Protection & Circuit Breaker)', () => {
       source: 'GOOGLE_ROUTES_API',
     };
 
-    // Before caching
     expect(guard.getCachedRoute(mumbai, pune)).toBeNull();
 
-    // Cache the route
     guard.setCachedRoute(mumbai, pune, dummyResult, 'now', 15);
 
-    // After caching
     const cached = guard.getCachedRoute(mumbai, pune);
     expect(cached).toBeDefined();
     expect(cached?.source).toBe('GOOGLE_ROUTES_API');
