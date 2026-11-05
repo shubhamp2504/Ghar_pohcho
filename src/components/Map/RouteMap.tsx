@@ -48,10 +48,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         attributionControl: false,
       }).setView([19.076, 72.8777], 9);
 
-      // Clean base tile layer: Use OpenStreetMap Standard (100% open, zero watermark) or TomTom main map
-      const baseMapUrl = tomtomKey
-        ? `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${tomtomKey}`
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      // Clean base tile layer: OpenStreetMap Standard (100% open, zero watermark, zero API key required)
+      const baseMapUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       L.tileLayer(baseMapUrl, {
         maxZoom: 19,
