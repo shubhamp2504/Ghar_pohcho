@@ -86,5 +86,6 @@ export interface PopularRoutePreset {
   destination: LocationPoint;
   typicalDuration: string;
   highwayTag: string;
+  category?: 'HIGHWAY' | 'GETAWAY' | 'PILGRIMAGE';
 }
 

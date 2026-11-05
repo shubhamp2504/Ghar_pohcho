@@ -61,6 +61,7 @@ export const HomeSearch: React.FC<HomeSearchProps> = ({
 
   const [departureWindow, setDepartureWindow] = useState<'now' | '30m' | '1h' | '2h'>('now');
   const [travelMode, setTravelMode] = useState<'DRIVE' | 'TWO_WHEELER'>('DRIVE');
+  const [corridorCategory, setCorridorCategory] = useState<'ALL' | 'HIGHWAY' | 'GETAWAY' | 'PILGRIMAGE'>('ALL');
 
   const [recentJourneys] = useState<Array<{ origin: LocationPoint; destination: LocationPoint }>>(() =>
     routingService.getRecentSearches()
@@ -421,28 +422,88 @@ export const HomeSearch: React.FC<HomeSearchProps> = ({
         </form>
       </div>
 
-      {/* Popular Highway Corridors */}
+      {/* Popular Highway Corridors & Famous Getaways */}
       <div className="mt-8">
-        <div className="flex items-center gap-2 mb-3">
-          <Compass className="w-4 h-4 text-orange-600" />
-          <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
-            {t.popularCorridors}
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Compass className="w-4 h-4 text-orange-600" />
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+              {t.popularCorridors}
+            </h2>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px]">
+            <button
+              type="button"
+              onClick={() => setCorridorCategory('ALL')}
+              className={`px-2.5 py-1 rounded-full font-bold transition-all shrink-0 ${
+                corridorCategory === 'ALL'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {t.corridorAll}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCorridorCategory('HIGHWAY')}
+              className={`px-2.5 py-1 rounded-full font-bold transition-all shrink-0 ${
+                corridorCategory === 'HIGHWAY'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              🛣️ {t.corridorExpressways}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCorridorCategory('GETAWAY')}
+              className={`px-2.5 py-1 rounded-full font-bold transition-all shrink-0 ${
+                corridorCategory === 'GETAWAY'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              🏖️ {t.corridorGetaways}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCorridorCategory('PILGRIMAGE')}
+              className={`px-2.5 py-1 rounded-full font-bold transition-all shrink-0 ${
+                corridorCategory === 'PILGRIMAGE'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              🛕 {t.corridorPilgrimage}
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {POPULAR_ROUTE_PRESETS.slice(0, 4).map((preset) => (
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
+          {POPULAR_ROUTE_PRESETS.filter(
+            (p) => corridorCategory === 'ALL' || p.category === corridorCategory
+          ).map((preset) => (
             <button
               key={preset.id}
-              onClick={() => handleApplyPreset(preset)}
-              className="p-3 bg-white hover:bg-orange-50/60 border border-slate-200/80 rounded-2xl shadow-sm text-left transition-all hover:border-orange-300 group flex items-center justify-between"
+              type="button"
+              onClick={() => {
+                handleApplyPreset(preset);
+                searchContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="p-3 bg-white hover:bg-orange-50/70 border border-slate-200/90 rounded-2xl shadow-sm text-left transition-all hover:border-orange-300 group flex items-center justify-between"
             >
-              <div>
-                <div className="text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
-                  {preset.titleKey}
+              <div className="pr-2">
+                <div className="text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors flex items-center gap-1.5">
+                  {preset.category === 'GETAWAY' && <span className="text-xs">🌲</span>}
+                  {preset.category === 'PILGRIMAGE' && <span className="text-xs">🛕</span>}
+                  {preset.category === 'HIGHWAY' && <span className="text-xs">🛣️</span>}
+                  <span>{preset.titleKey}</span>
                 </div>
-                <div className="text-xs text-slate-500">{preset.highwayTag}</div>
+                <div className="text-xs text-slate-500 line-clamp-1">{preset.highwayTag}</div>
               </div>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 shrink-0">
                 ~{preset.typicalDuration}
               </span>
             </button>
