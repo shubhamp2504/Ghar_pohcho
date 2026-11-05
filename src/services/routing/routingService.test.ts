@@ -5,6 +5,7 @@ import { MockRoutingProvider } from './mockRoutingProvider';
 import type { LocationPoint } from '../../types/routing';
 
 import { FreeOsrmRoutingProvider } from './freeOsrmProvider';
+import { TomTomRoutingProvider } from './tomtomProvider';
 
 describe('RoutingService & Providers Integration', () => {
   let service: RoutingService;
@@ -124,5 +125,25 @@ describe('RoutingService & Providers Integration', () => {
     expect(result.routes[0].distanceMeters).toBeGreaterThan(120000);
     expect(result.routes[0].polyline.length).toBeGreaterThan(5);
     expect(result.disclaimer).toContain('zero API costs');
+  });
+
+  it('checks TomTomRoutingProvider configuration and safety fallback', async () => {
+    const tomtom = new TomTomRoutingProvider(null);
+    expect(tomtom.isConfigured()).toBe(false);
+
+    await expect(
+      tomtom.calculateRoutes({
+        origin: mumbai,
+        destination: pune,
+      })
+    ).rejects.toThrow('TomTom API key is not configured');
+
+    // RoutingService seamlessly prioritizes and falls back when key is null
+    service.setTomTomKey(null);
+    const result = await service.calculateRoutes({
+      origin: mumbai,
+      destination: pune,
+    });
+    expect(result.routes.length).toBeGreaterThan(0);
   });
 });

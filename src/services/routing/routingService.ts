@@ -4,58 +4,111 @@ import type {
   LocationPoint,
 } from '../../types/routing';
 import { GoogleRoutesProvider } from './googleRoutesProvider';
+import { TomTomRoutingProvider } from './tomtomProvider';
 import { FreeOsrmRoutingProvider } from './freeOsrmProvider';
 import { MockRoutingProvider } from './mockRoutingProvider';
 import { quotaGuard } from '../quota/quotaGuard';
 
-const API_KEY_STORAGE_KEY = 'gharpahucho_google_api_key';
+const GOOGLE_KEY_STORAGE = 'gharpahucho_google_api_key';
+const TOMTOM_KEY_STORAGE = 'gharpahucho_tomtom_api_key';
 const RECENT_SEARCHES_STORAGE_KEY = 'gharpahucho_recent_searches';
 
 export class RoutingService {
   private googleProvider: GoogleRoutesProvider;
+  private tomtomProvider: TomTomRoutingProvider;
   private freeOsrmProvider: FreeOsrmRoutingProvider;
   private mockProvider: MockRoutingProvider;
 
   constructor() {
-    const savedKey = this.getStoredApiKey();
-    this.googleProvider = new GoogleRoutesProvider(savedKey);
+    this.googleProvider = new GoogleRoutesProvider(this.getStoredGoogleKey());
+    this.tomtomProvider = new TomTomRoutingProvider(this.getStoredTomTomKey());
     this.freeOsrmProvider = new FreeOsrmRoutingProvider();
     this.mockProvider = new MockRoutingProvider();
   }
 
-  getStoredApiKey(): string | null {
+  getStoredGoogleKey(): string | null {
     if (typeof window === 'undefined') return null;
     return (
-      localStorage.getItem(API_KEY_STORAGE_KEY) ||
+      localStorage.getItem(GOOGLE_KEY_STORAGE) ||
       (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
       null
     );
   }
 
+  getStoredApiKey(): string | null {
+    return this.getStoredGoogleKey() || this.getStoredTomTomKey();
+  }
+
   setApiKey(key: string | null): void {
+    this.setGoogleKey(key);
+  }
+
+  getStoredTomTomKey(): string | null {
+    if (typeof window === 'undefined') return null;
+    return (
+      localStorage.getItem(TOMTOM_KEY_STORAGE) ||
+      (import.meta.env.VITE_TOMTOM_API_KEY as string | undefined) ||
+      null
+    );
+  }
+
+  setGoogleKey(key: string | null): void {
     if (typeof window === 'undefined') return;
     if (key && key.trim()) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, key.trim());
+      localStorage.setItem(GOOGLE_KEY_STORAGE, key.trim());
       this.googleProvider.setApiKey(key.trim());
     } else {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
+      localStorage.removeItem(GOOGLE_KEY_STORAGE);
       this.googleProvider.setApiKey(null);
     }
   }
 
+  setTomTomKey(key: string | null): void {
+    if (typeof window === 'undefined') return;
+    if (key && key.trim()) {
+      localStorage.setItem(TOMTOM_KEY_STORAGE, key.trim());
+      this.tomtomProvider.setApiKey(key.trim());
+    } else {
+      localStorage.removeItem(TOMTOM_KEY_STORAGE);
+      this.tomtomProvider.setApiKey(null);
+    }
+  }
+
+  hasConfiguredLiveKey(): boolean {
+    return this.tomtomProvider.isConfigured() || this.googleProvider.isConfigured();
+  }
+
   hasConfiguredApiKey(): boolean {
-    return this.googleProvider.isConfigured();
+    return this.hasConfiguredLiveKey();
+  }
+
+  getActiveProviderName(): string {
+    if (this.tomtomProvider.isConfigured()) return 'TomTom Live Traffic (Free Tier)';
+    if (this.googleProvider.isConfigured()) return 'Google Routes Live API';
+    return '100% Free Open Engine ($0)';
   }
 
   async calculateRoutes(request: RouteRequest): Promise<RouteCalculationResult> {
-    // 1. Check Short-Lived Cache (Deduplication - prevents repeating identical API queries)
+    // 1. Check Short-Lived Cache (Deduplication - Instant Response & Zero Calls)
     const cached = quotaGuard.getCachedRoute(request.origin, request.destination, request.departureTime);
     if (cached) {
       this.saveRecentSearch(request.origin, request.destination);
       return cached;
     }
 
-    // 2. If user provided a Google Key, check Safety Quota Guard before making call
+    // 2. Primary: TomTom Real-Time Traffic Engine (2,500 Free Requests/Day • No Card Required)
+    if (this.tomtomProvider.isConfigured()) {
+      try {
+        const result = await this.tomtomProvider.calculateRoutes(request);
+        quotaGuard.setCachedRoute(request.origin, request.destination, result, request.departureTime);
+        this.saveRecentSearch(request.origin, request.destination);
+        return result;
+      } catch (err: unknown) {
+        console.warn('TomTom Live Traffic API call failed, falling back to Free Open Engine:', err);
+      }
+    }
+
+    // 3. Optional: Google Routes API (if configured)
     if (this.googleProvider.isConfigured()) {
       if (quotaGuard.canMakeGoogleCall()) {
         try {
@@ -65,19 +118,14 @@ export class RoutingService {
           this.saveRecentSearch(request.origin, request.destination);
           return result;
         } catch (err: unknown) {
-          console.warn('Google Routes API call failed, falling back to 100% Free OSRM:', err);
+          console.warn('Google Routes API call failed, falling back to Free Open Engine:', err);
         }
-      } else {
-        console.warn('Google API daily free quota cap reached! Automatic circuit breaker tripped to guarantee $0 spend.');
       }
     }
 
-    // 3. 100% Free OpenStreetMap & Community Traffic Engine (Zero Cost, No Billing)
+    // 4. Default: 100% Free OpenStreetMap & Community Traffic Engine (Zero Cost, No Cards, Unlimited)
     try {
       const result = await this.freeOsrmProvider.calculateRoutes(request);
-      if (this.googleProvider.isConfigured() && !quotaGuard.canMakeGoogleCall()) {
-        result.disclaimer = 'Free Google API safety quota reached for today. Switched automatically to Free Open Network to guarantee $0 spend.';
-      }
       quotaGuard.setCachedRoute(request.origin, request.destination, result, request.departureTime);
       this.saveRecentSearch(request.origin, request.destination);
       return result;
@@ -85,7 +133,7 @@ export class RoutingService {
       console.warn('Free OSRM network request failed, falling back to Offline Highway Corridor:', osrmErr);
     }
 
-    // 4. Offline Corridor Resilient Fallback
+    // 5. Offline Corridor Resilient Fallback
     const result = await this.mockProvider.calculateRoutes(request);
     this.saveRecentSearch(request.origin, request.destination);
     return result;
@@ -119,7 +167,6 @@ export class RoutingService {
         timestamp: new Date().toISOString(),
       });
 
-      // Keep last 6 searches
       localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(recents.slice(0, 6)));
     } catch {
       // Storage errors handled silently

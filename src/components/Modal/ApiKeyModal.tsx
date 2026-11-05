@@ -7,11 +7,13 @@ import {
   Database,
   ShieldCheck,
   CreditCard,
+  Zap,
+  ExternalLink,
 } from 'lucide-react';
 import type { Language } from '../../types/routing';
 import { translations } from '../../i18n/translations';
 import { getSupabaseCredentials, setSupabaseCredentials } from '../../services/supabase/supabaseClient';
-import { quotaGuard } from '../../services/quota/quotaGuard';
+import { routingService } from '../../services/routing/routingService';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -28,20 +30,21 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   onSaveKey,
   language,
 }) => {
-  const [keyValue, setKeyValue] = useState(currentApiKey || '');
+  const [googleKey, setGoogleKey] = useState(currentApiKey || '');
+  const [tomtomKey, setTomTomKey] = useState(() => routingService.getStoredTomTomKey() || '');
   const initialSb = getSupabaseCredentials();
   const [sbUrl, setSbUrl] = useState(initialSb.url || '');
   const [sbKey, setSbKey] = useState(initialSb.anonKey || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-
-  const [usageStats, setUsageStats] = useState(() => quotaGuard.getStats());
 
   if (!isOpen) return null;
 
   const t = translations[language];
 
   const handleSave = () => {
-    onSaveKey(keyValue.trim() || null);
+    onSaveKey(googleKey.trim() || null);
+    routingService.setTomTomKey(tomtomKey.trim() || null);
+
     if (sbUrl.trim() && sbKey.trim()) {
       setSupabaseCredentials(sbUrl.trim(), sbKey.trim());
     } else {
@@ -49,7 +52,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
     }
 
     setSaveStatus(t.keySaved);
-    setUsageStats(quotaGuard.getStats());
     setTimeout(() => {
       setSaveStatus(null);
       onClose();
@@ -57,18 +59,21 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   };
 
   const handleClear = () => {
-    setKeyValue('');
+    setGoogleKey('');
+    setTomTomKey('');
     setSbUrl('');
     setSbKey('');
     onSaveKey(null);
+    routingService.setTomTomKey(null);
     setSupabaseCredentials(null, null);
     setSaveStatus('Cleared! Using 100% Free Open Engine ($0)');
-    setUsageStats(quotaGuard.getStats());
     setTimeout(() => {
       setSaveStatus(null);
       onClose();
     }, 900);
   };
+
+  const activeProvider = routingService.getActiveProviderName();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
@@ -87,7 +92,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-black text-slate-900">{t.apiKeyTitle}</h3>
-            <p className="text-xs text-slate-500">{t.apiKeySettings}</p>
+            <p className="text-xs text-slate-500">Active: {activeProvider}</p>
           </div>
         </div>
 
@@ -97,37 +102,55 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <span className="text-xs font-black text-emerald-900">
-                Zero-Spend Free Quota Active
+                100% Free / Zero-Spend Architecture
               </span>
             </div>
             <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900">
-              ₹0.00 / $0 Cost
+              ₹0.00 Cost Guarantee
             </span>
           </div>
           <p className="text-[11px] text-emerald-800 leading-relaxed">
-            Google provides <strong>$200 in monthly free credit</strong> (~20,000 free route calculations/month). No daily restriction is applied — you can use your quota whenever you need.
+            GharPahucho is designed to run with <strong>zero bank cards and zero payments</strong>. You can use our built-in OpenStreetMap engine, or add a free TomTom key below for live sensor traffic.
           </p>
-
-          {/* Monthly Meter */}
-          <div className="pt-1 space-y-1">
-            <div className="flex justify-between text-[11px] font-bold text-emerald-900">
-              <span>Calls Used This Month: {usageStats.monthlyCalls} / {usageStats.monthlyLimit}</span>
-              <span>Today: {usageStats.todayCalls} calls</span>
-            </div>
-            <div className="w-full bg-emerald-200/60 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(100, (usageStats.monthlyCalls / usageStats.monthlyLimit) * 100)}%`,
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Inputs */}
         <div className="space-y-4 mb-5">
-          {/* Google Key */}
+          {/* TomTom Free Live Traffic Key (Recommended: No Card Required!) */}
+          <div className="p-3.5 bg-orange-50/50 border border-orange-200 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-black text-xs text-orange-950">
+                <Zap className="w-4 h-4 text-orange-600" />
+                <span>TomTom Live Traffic Key (Recommended)</span>
+              </div>
+              <span className="text-[10px] font-black bg-orange-200 text-orange-900 px-2 py-0.5 rounded-full">
+                2,500 Calls/Day Free
+              </span>
+            </div>
+            <p className="text-[11px] text-orange-800 leading-relaxed">
+              <strong>No Credit Card or AutoPay needed!</strong> Sign up with just an email to get 2,500 live traffic route calculations per day across India for free.
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="password"
+                value={tomtomKey}
+                onChange={(e) => setTomTomKey(e.target.value)}
+                placeholder="Paste TomTom API Key..."
+                className="flex-1 px-3 py-2 text-xs font-mono border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+              />
+              <a
+                href="https://developer.tomtom.com"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 bg-white hover:bg-orange-100 text-orange-700 text-xs font-bold rounded-xl border border-orange-300 flex items-center gap-1 transition-colors shrink-0"
+              >
+                <span>Get Free Key</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          {/* Google Key (Optional) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -137,9 +160,9 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             </div>
             <input
               type="password"
-              value={keyValue}
-              onChange={(e) => setKeyValue(e.target.value)}
-              placeholder="AIzaSy... (Leave empty to use 100% Free Open Engine)"
+              value={googleKey}
+              onChange={(e) => setGoogleKey(e.target.value)}
+              placeholder="AIzaSy... (Leave empty to avoid card/AutoPay)"
               className="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50"
             />
           </div>
@@ -148,13 +171,13 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold">
               <CreditCard className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Does Google require a card to activate the free quota?</span>
+              <span>Why avoid Google Cloud if you want $0 spend?</span>
             </div>
             <p className="leading-relaxed">
-              <strong>Yes:</strong> Google Cloud does not charge you upfront, but they <strong>strictly require entering a Credit/Debit Card</strong> to verify identity and enable the API billing account (temporary ₹2 test authorization).
+              Google Cloud requires an <strong>AutoPay bank mandate (up to ₹15,000)</strong> during card registration. If you exceed the quota, Google can auto-debit your account.
             </p>
-            <p className="leading-relaxed text-amber-800">
-              💡 <strong>If you do not want to enter any card:</strong> Simply leave this field blank! GharPahucho will run completely on our <strong>100% Free OpenStreetMap engine</strong> with zero cards, zero payments, and zero signups required.
+            <p className="leading-relaxed text-emerald-800 font-semibold">
+              💡 <strong>TomTom and OpenStreetMap never ask for a card or AutoPay.</strong> They are 100% safe.
             </p>
           </div>
 
@@ -199,7 +222,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           >
             {t.saveKey}
           </button>
-          {currentApiKey && (
+          {(googleKey || tomtomKey || sbUrl) && (
             <button
               onClick={handleClear}
               className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-2xl transition-colors text-sm flex items-center gap-1.5"
