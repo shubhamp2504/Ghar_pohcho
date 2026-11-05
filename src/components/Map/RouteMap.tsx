@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { RouteOption, LocationPoint, Language } from '../../types/routing';
 import type { CommunityReport } from '../../types/community';
 import { getCongestionColor } from '../../utils/geo';
+import { routingService } from '../../services/routing/routingService';
 
 interface RouteMapProps {
   routes: RouteOption[];
@@ -12,6 +13,8 @@ interface RouteMapProps {
   language: Language;
   communityReports?: CommunityReport[];
   onSelectRoute?: (index: number) => void;
+  userLocation?: { lat: number; lng: number; heading?: number } | null;
+  highlightedPoint?: { lat: number; lng: number; title: string; category?: string } | null;
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
@@ -22,26 +25,60 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   language,
   communityReports,
   onSelectRoute,
+  userLocation,
+  highlightedPoint,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routeLayersRef = useRef<L.LayerGroup | null>(null);
+  const trafficLayerRef = useRef<L.TileLayer | null>(null);
+  const incidentsLayerRef = useRef<L.TileLayer | null>(null);
 
+  const tomtomKey = routingService.getStoredTomTomKey();
+  const [showTrafficFlow, setShowTrafficFlow] = useState(true);
+  const [showIncidents, setShowIncidents] = useState(true);
+
+  // Initialize Map and Layers
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Initialize map instance
       const map = L.map(mapContainerRef.current, {
         zoomControl: false,
         attributionControl: false,
       }).setView([19.076, 72.8777], 9);
 
-      // Clean CartoDB Voyager or OSM tile layer
+      // Clean base tile layer (CartoDB Voyager)
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         subdomains: 'abcd',
+        zIndex: 1,
       }).addTo(map);
+
+      // TomTom Real-Time Traffic Flow & Incidents Overlay
+      if (tomtomKey) {
+        const flowLayer = L.tileLayer(
+          `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${tomtomKey}`,
+          {
+            maxZoom: 19,
+            opacity: 0.85,
+            zIndex: 2,
+          }
+        );
+        trafficLayerRef.current = flowLayer;
+        flowLayer.addTo(map);
+
+        const incLayer = L.tileLayer(
+          `https://api.tomtom.com/traffic/map/4/tile/incidents/s3/{z}/{x}/{y}.png?key=${tomtomKey}`,
+          {
+            maxZoom: 19,
+            opacity: 0.9,
+            zIndex: 3,
+          }
+        );
+        incidentsLayerRef.current = incLayer;
+        incLayer.addTo(map);
+      }
 
       // Add Zoom control at bottom right for mobile ergonomics
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -49,7 +86,32 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       mapInstanceRef.current = map;
       routeLayersRef.current = L.layerGroup().addTo(map);
     }
+  }, [tomtomKey]);
 
+  // Sync layer toggle visibility
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (trafficLayerRef.current) {
+      if (showTrafficFlow && !map.hasLayer(trafficLayerRef.current)) {
+        map.addLayer(trafficLayerRef.current);
+      } else if (!showTrafficFlow && map.hasLayer(trafficLayerRef.current)) {
+        map.removeLayer(trafficLayerRef.current);
+      }
+    }
+
+    if (incidentsLayerRef.current) {
+      if (showIncidents && !map.hasLayer(incidentsLayerRef.current)) {
+        map.addLayer(incidentsLayerRef.current);
+      } else if (!showIncidents && map.hasLayer(incidentsLayerRef.current)) {
+        map.removeLayer(incidentsLayerRef.current);
+      }
+    }
+  }, [showTrafficFlow, showIncidents]);
+
+  // Render Polylines, Markers, Incidents, User GPS
+  useEffect(() => {
     const map = mapInstanceRef.current;
     const layerGroup = routeLayersRef.current;
     if (!layerGroup || !map) return;
@@ -200,6 +262,43 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       });
     }
 
+    // 7. Highlighted Point (e.g., Selected Highway Dhaba, Petrol Pump, EV Charger)
+    if (highlightedPoint) {
+      const stopIcon = L.divIcon({
+        className: 'custom-stop-marker',
+        html: `
+          <div style="background: #0284C7; color: white; padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 2px solid white; white-space: nowrap;">
+            <span>📍</span>
+            <span>${highlightedPoint.title}</span>
+          </div>
+        `,
+        iconSize: [140, 30],
+        iconAnchor: [70, 15],
+      });
+      const stopMarker = L.marker([highlightedPoint.lat, highlightedPoint.lng], { icon: stopIcon, zIndexOffset: 800 }).addTo(layerGroup);
+      stopMarker.bindPopup(`<b>${highlightedPoint.title}</b><br/>${highlightedPoint.category || 'Corridor Stop'}`).openPopup();
+      allBounds.extend([highlightedPoint.lat, highlightedPoint.lng]);
+    }
+
+    // 8. In-Car GPS Live Tracking Marker (Blue pulsating navigation indicator)
+    if (userLocation) {
+      const gpsIcon = L.divIcon({
+        className: 'custom-gps-marker',
+        html: `
+          <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: rgba(59, 130, 246, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #2563EB; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; transform: rotate(${userLocation.heading || 0}deg);">
+              ▲
+            </div>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+      L.marker([userLocation.lat, userLocation.lng], { icon: gpsIcon, zIndexOffset: 1000 }).addTo(layerGroup);
+      allBounds.extend([userLocation.lat, userLocation.lng]);
+    }
+
     // Fit map bounds
     if (allBounds.isValid()) {
       map.fitBounds(allBounds, {
@@ -207,7 +306,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         maxZoom: 14,
       });
     }
-  }, [routes, selectedRouteIndex, origin, destination, language, communityReports, onSelectRoute]);
+  }, [routes, selectedRouteIndex, origin, destination, language, communityReports, onSelectRoute, userLocation, highlightedPoint]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -222,7 +321,46 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   return (
     <div className="relative w-full h-72 md:h-96 rounded-2xl overflow-hidden shadow-inner border border-slate-200">
       <div ref={mapContainerRef} className="w-full h-full" />
-      
+
+      {/* Top Right: TomTom Live Traffic & Incidents Layer Controls */}
+      <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-1.5">
+        <div className="bg-white/95 backdrop-blur-sm p-1.5 rounded-xl shadow-md border border-slate-200/80 text-xs flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowTrafficFlow((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors ${
+              showTrafficFlow
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+            title="Toggle TomTom Live Traffic Flow tile layer"
+          >
+            <span className={`w-2 h-2 rounded-full ${showTrafficFlow ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            <span>🚦 Live Flow: {showTrafficFlow ? 'ON' : 'OFF'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowIncidents((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors ${
+              showIncidents
+                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+            title="Toggle TomTom Live Incidents tile layer"
+          >
+            <span>⚠️ Incidents: {showIncidents ? 'ON' : 'OFF'}</span>
+          </button>
+        </div>
+
+        {tomtomKey && showTrafficFlow && (
+          <div className="bg-emerald-700/90 text-white backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+            <span>TomTom Real-Time Traffic Sync</span>
+          </div>
+        )}
+      </div>
+
       {/* Map Legend Overlay */}
       <div className="absolute top-3 left-3 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-md border border-slate-200/80 text-xs flex flex-wrap gap-3 items-center">
         <span className="font-semibold text-slate-700">Traffic:</span>

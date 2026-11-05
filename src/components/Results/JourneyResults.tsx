@@ -14,9 +14,11 @@ import {
   TrendingUp,
   Radio,
   PlusCircle,
+  Navigation,
 } from 'lucide-react';
 import type { RouteCalculationResult, Language } from '../../types/routing';
 import type { CommunityReport } from '../../types/community';
+import type { CorridorStop } from '../../types/stops';
 import { translations } from '../../i18n/translations';
 import {
   formatDuration,
@@ -27,6 +29,8 @@ import {
 import { RouteMap } from '../Map/RouteMap';
 import { CommunityReportCard } from '../Community/CommunityReportCard';
 import { ReportIncidentModal } from '../Community/ReportIncidentModal';
+import { CorridorStopsSection } from '../Stops/CorridorStopsSection';
+import { InCarDriveMode } from '../Navigation/InCarDriveMode';
 import { communityService } from '../../services/community/communityService';
 
 interface JourneyResultsProps {
@@ -46,6 +50,9 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
   const [copied, setCopied] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [corridorReports, setCorridorReports] = useState<CommunityReport[]>([]);
+  const [selectedStop, setSelectedStop] = useState<CorridorStop | null>(null);
+  const [isDriveModeOpen, setIsDriveModeOpen] = useState(false);
+  const [userDriveLocation, setUserDriveLocation] = useState<{ lat: number; lng: number; heading?: number } | null>(null);
 
   const selectedRoute = result.routes[selectedRouteIdx] || result.routes[0];
   const delayInfo = formatDelay(selectedRoute.additionalDelaySeconds, language);
@@ -126,6 +133,17 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsDriveModeOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-98"
+          >
+            <Navigation className="w-4 h-4 animate-pulse" />
+            <span className="hidden sm:inline">
+              {language === 'hi' ? 'लाइव ड्राइव' : language === 'mr' ? 'थेट ड्राइव्ह' : 'Live Drive'}
+            </span>
+            <span className="sm:hidden">Drive</span>
+          </button>
           <button
             onClick={handleCopy}
             className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
@@ -271,7 +289,7 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
       </div>
 
       {/* Interactive Traffic Map */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-slate-200/80">
+      <div id="map-card-container" className="bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-slate-200/80">
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-orange-600" />
@@ -291,7 +309,21 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           destination={result.destination}
           language={language}
           communityReports={corridorReports}
-          onSelectRoute={(idx) => setSelectedRouteIdx(idx)}
+          onSelectRoute={(idx) => {
+            setSelectedRouteIdx(idx);
+            setSelectedStop(null);
+          }}
+          userLocation={userDriveLocation}
+          highlightedPoint={
+            selectedStop
+              ? {
+                  lat: selectedStop.lat,
+                  lng: selectedStop.lng,
+                  title: selectedStop.name,
+                  category: selectedStop.brand || selectedStop.category,
+                }
+              : null
+          }
         />
       </div>
 
@@ -462,6 +494,20 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
         )}
       </div>
 
+      {/* Highway Pit-Stops & Amenities Section (Phase 3 - Section 8) */}
+      <CorridorStopsSection
+        polyline={selectedRoute.polyline}
+        language={language}
+        selectedStopId={selectedStop?.id}
+        onSelectStop={(stop) => {
+          setSelectedStop(stop);
+          const mapEl = document.getElementById('map-card-container');
+          if (mapEl) {
+            mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }}
+      />
+
       {/* Community Ground Reports Section (Phase 2 - Section 7) */}
       <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-lg border border-slate-200/80 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -572,6 +618,18 @@ export const JourneyResults: React.FC<JourneyResultsProps> = ({
           *Planning estimate based on typical historical corridor patterns. Departure forecasts are updated in real-time.
         </p>
       </div>
+
+      {/* Fullscreen In-Car Live Driving HUD Mode */}
+      {isDriveModeOpen && (
+        <InCarDriveMode
+          route={selectedRoute}
+          origin={result.origin}
+          destination={result.destination}
+          language={language}
+          onClose={() => setIsDriveModeOpen(false)}
+          onUpdateLocation={(loc) => setUserDriveLocation(loc)}
+        />
+      )}
 
       {/* Community Report Incident Modal */}
       <ReportIncidentModal
