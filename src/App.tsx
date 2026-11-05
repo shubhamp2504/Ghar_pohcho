@@ -5,6 +5,8 @@ import { JourneyResults } from './components/Results/JourneyResults';
 import type { Language, LocationPoint, RouteCalculationResult } from './types/routing';
 import { routingService } from './services/routing/routingService';
 import { translations } from './i18n/translations';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const LANGUAGE_KEY = 'gharpahucho_lang';
 const CURRENT_YEAR = new Date().getFullYear();
@@ -100,6 +102,10 @@ export function App() {
           </div>
         </div>
       </footer>
+
+      {/* Vercel Web Analytics & Real-Time Speed Insights */}
+      <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
